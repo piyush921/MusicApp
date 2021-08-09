@@ -3,7 +3,7 @@ package com.music.app.activities
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.music.app.R
@@ -12,6 +12,7 @@ import com.music.app.base.BaseActivity
 import com.music.app.databinding.ActivityHomeBinding
 import com.music.app.models.SongsModel
 import com.music.app.songsRepository.SongsRepository
+
 
 class HomeActivity : BaseActivity(), View.OnClickListener
     , SongsAdapter.SongSelectionListener
@@ -22,7 +23,8 @@ class HomeActivity : BaseActivity(), View.OnClickListener
     private lateinit var layoutManager: LinearLayoutManager
     private lateinit var adapter: SongsAdapter
     private lateinit var songsList: MutableList<SongsModel.Audio>
-    var songsRepository: SongsRepository = SongsRepository(this, this)
+    private var songsRepository: SongsRepository = SongsRepository(this, this)
+    private var isExpanded: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,13 +61,16 @@ class HomeActivity : BaseActivity(), View.OnClickListener
                     }
                     BottomSheetBehavior.STATE_EXPANDED -> {
                         Log.d("thisisdata", "expanded")
+                        isExpanded = true
+                        expanded()
                     }
                     BottomSheetBehavior.STATE_COLLAPSED -> {
                         binding.musicPlayer.closeHideButton.setImageResource(R.drawable.ic_arrow_up)
+                        isExpanded = false
+                        collapsed()
                     }
                     BottomSheetBehavior.STATE_DRAGGING -> {
                         Log.d("thisisdata", "dragging")
-                        binding.musicPlayer.closeHideButton.setImageResource(R.drawable.ic_arrow_down)
                     }
                     BottomSheetBehavior.STATE_SETTLING -> {
                         Log.d("thisisdata", "settling")
@@ -84,6 +89,30 @@ class HomeActivity : BaseActivity(), View.OnClickListener
         })
     }
 
+    private fun collapsed() {
+        binding.musicPlayer.collapsedLayout.visibility = View.VISIBLE
+        binding.musicPlayer.songName2.visibility = View.GONE
+        binding.musicPlayer.more.visibility = View.GONE
+
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(binding.musicPlayer.bottomSheet)
+        constraintSet.clear(R.id.close_hide_button, ConstraintSet.START)
+        constraintSet.connect(R.id.close_hide_button, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END)
+        constraintSet.applyTo(binding.musicPlayer.bottomSheet)
+    }
+
+    private fun expanded() {
+        binding.musicPlayer.collapsedLayout.visibility = View.GONE
+        binding.musicPlayer.songName2.visibility = View.VISIBLE
+        binding.musicPlayer.more.visibility = View.VISIBLE
+
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(binding.musicPlayer.bottomSheet)
+        constraintSet.clear(R.id.close_hide_button, ConstraintSet.END)
+        constraintSet.connect(R.id.close_hide_button, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START)
+        constraintSet.applyTo(binding.musicPlayer.bottomSheet)
+    }
+
     private fun setupRecyclerview() {
         binding.songsRecyclerview.layoutManager = layoutManager
         binding.songsRecyclerview.adapter = adapter
@@ -98,6 +127,14 @@ class HomeActivity : BaseActivity(), View.OnClickListener
                     behavior.setState(BottomSheetBehavior.STATE_COLLAPSED)
                 }
             }
+        }
+    }
+
+    override fun onBackPressed() {
+        if(isExpanded) {
+            behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        } else {
+            super.onBackPressed()
         }
     }
 

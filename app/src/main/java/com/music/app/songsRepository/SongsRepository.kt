@@ -12,7 +12,6 @@ import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-
 open class SongsRepository(var context: Context, val listener: GetSongsListener) {
 
     fun getAllSongs() {
@@ -47,8 +46,7 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
         }
     }
 
-    open class LongRunningTask(private var context: Context) :
-        Callable<MutableList<SongsModel.Audio>> {
+    open class LongRunningTask(private var context: Context) : Callable<MutableList<SongsModel.Audio>> {
 
         override fun call(): MutableList<SongsModel.Audio> {
             val audioList = mutableListOf<SongsModel.Audio>()
