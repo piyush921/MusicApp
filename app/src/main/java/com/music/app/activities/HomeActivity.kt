@@ -1,18 +1,21 @@
 package com.music.app.activities
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.exoplayer2.util.Util
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.music.app.Constants
 import com.music.app.R
 import com.music.app.adapters.SongsAdapter
 import com.music.app.base.BaseActivity
 import com.music.app.databinding.ActivityHomeBinding
 import com.music.app.models.SongsModel
+import com.music.app.services.PlayerService
 import com.music.app.songsRepository.SongsRepository
-
 
 class HomeActivity : BaseActivity(), View.OnClickListener
     , SongsAdapter.SongSelectionListener
@@ -25,6 +28,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener
     private lateinit var songsList: MutableList<SongsModel.Audio>
     private var songsRepository: SongsRepository = SongsRepository(this, this)
     private var isExpanded: Boolean = false
+    private var isPlaying: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -149,5 +153,18 @@ class HomeActivity : BaseActivity(), View.OnClickListener
 
     override fun onSongsSelect(model: SongsModel.Audio) {
         behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+
+        val intent = Intent(this, PlayerService::class.java)
+        if(!isPlaying) {
+            intent.action = Constants.SERVICE_ACTION_NOT_PLAYING
+        } else {
+            intent.action = Constants.SERVICE_ACTION_ALREADY_PLAYING
+        }
+        intent.putExtra(Constants.KEY_TITLE, model.title)
+        intent.putExtra(Constants.KEY_ARTIST, model.artist)
+        intent.putExtra(Constants.KEY_URI, model.uri.toString())
+        Util.startForegroundService(this, intent)
+
+        isPlaying = true
     }
 }

@@ -55,4 +55,7 @@ dependencies {
 
     //progress shimmer
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
+
+    //exoPlayer
+    implementation 'com.google.android.exoplayer:exoplayer:2.15.0'
 }

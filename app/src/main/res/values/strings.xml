@@ -2,4 +2,8 @@
     <string name="app_name">Music App</string>
     <string name="search">Search</string>
     <string name="lyrics">Lyrics</string>
+
+    <string name="player_channel_id">1234</string>
+    <string name="player_channel_desc">this is description</string>
+    <string name="player_channel_name">this is channel name</string>
 </resources>
