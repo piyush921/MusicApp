@@ -1,6 +1,7 @@
 package com.music.app.adapters
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Build
 import android.util.Size
 import android.view.LayoutInflater
@@ -29,13 +30,14 @@ open class SongsAdapter(
 
     override fun onBindViewHolder(holder: SongsViewHolder, position: Int) {
 
-        holder.songName.setText(list.get(position).title)
-        holder.albumName.setText(list.get(position).album)
+        holder.songName.text = list[position].title
+        holder.albumName.text = list[position].album
+        var bitmap: Bitmap? = null
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
-                val bitmap =
-                    context.contentResolver.loadThumbnail(list[position].uri, Size(50, 50), null)
+                bitmap =
+                    context.contentResolver.loadThumbnail(list[position].uri, Size(100, 100), null)
                 Glide.with(context).load(bitmap).into(holder.poster)
             } catch (e: FileNotFoundException) {
                 Glide.with(context).load(R.drawable.album).into(holder.poster)
@@ -43,7 +45,7 @@ open class SongsAdapter(
         }
 
         holder.itemView.setOnClickListener {
-            listener.onSongsSelect(list[position])
+            listener.onSongsSelect(list[position], bitmap!!)
         }
     }
 
@@ -59,7 +61,7 @@ open class SongsAdapter(
     }
 
     interface SongSelectionListener {
-        fun onSongsSelect(model: SongsModel.Audio)
+        fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap)
     }
 
 

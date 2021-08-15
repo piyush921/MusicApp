@@ -8,9 +8,12 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.util.Size
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST
 import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
@@ -20,10 +23,16 @@ import com.google.android.exoplayer2.util.Util
 import com.music.app.Constants
 import com.music.app.R
 import com.music.app.activities.HomeActivity
+import com.music.app.storage.PrefsHelper
 
 open class PlayerService : Service(),
     PlayerNotificationManager.MediaDescriptionAdapter,
-    PlayerNotificationManager.NotificationListener {
+    PlayerNotificationManager.NotificationListener,
+    Player.Listener {
+
+    companion object {
+        const val ACTION_PLAYER = "action_player"
+    }
 
     private lateinit var context: Context
     private lateinit var player: SimpleExoPlayer
@@ -33,6 +42,7 @@ open class PlayerService : Service(),
     private lateinit var title: String
     private lateinit var artist: String
     private lateinit var uri: String
+    //private lateinit var prefsHelper: PrefsHelper
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -42,34 +52,44 @@ open class PlayerService : Service(),
         super.onCreate()
 
         context = this
+        //prefsHelper = PrefsHelper(context)
         player = SimpleExoPlayer.Builder(context).build()
+        player.addListener(this)
+
         createChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
-        val action = intent?.action
-        title = intent?.getStringExtra(Constants.KEY_TITLE).toString()
-        artist = intent?.getStringExtra(Constants.KEY_ARTIST).toString()
-        uri = intent?.getStringExtra(Constants.KEY_URI).toString()
+        when (val action = intent?.action) {
+            Constants.SERVICE_ACTION_PAUSE -> {
+                player.pause()
+            }
+            Constants.SERVICE_ACTION_PLAY-> {
+                player.play()
+            }
+            else -> {
+                title = intent?.getStringExtra(Constants.KEY_TITLE).toString()
+                artist = intent?.getStringExtra(Constants.KEY_ARTIST).toString()
+                uri = intent?.getStringExtra(Constants.KEY_URI).toString()
+                if (action.equals(Constants.SERVICE_ACTION_ALREADY_PLAYING)) {
+                    player.stop()
+                    player.clearMediaItems()
+                }
+                val dataSourceFactory = DefaultDataSourceFactory(
+                    context, Util.getUserAgent(context, "MusicApp"))
+                val mediaSource: MediaSource = ProgressiveMediaSource
+                    .Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri))
+                player.setMediaSource(mediaSource)
+                player.prepare()
+                player.playWhenReady = true
 
-        if(action.equals(Constants.SERVICE_ACTION_ALREADY_PLAYING)) {
-            player.stop()
-            player.clearMediaItems()
+                notificationManager =
+                    PlayerNotificationManager.Builder(context, NOTIFICATION_ID, CHANNEL_ID)
+                        .setMediaDescriptionAdapter(this).setNotificationListener(this).build()
+                notificationManager.setPlayer(player)
+            }
         }
-
-        val dataSourceFactory = DefaultDataSourceFactory(
-            context, Util.getUserAgent(this, "MusicApp"))
-
-        val mediaSource: MediaSource = ProgressiveMediaSource
-            .Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri))
-        player.setMediaSource(mediaSource)
-        player.prepare()
-        player.playWhenReady = true
-
-        notificationManager = PlayerNotificationManager.Builder(context, NOTIFICATION_ID, CHANNEL_ID)
-            .setMediaDescriptionAdapter(this).setNotificationListener(this).build()
-        notificationManager.setPlayer(player)
 
         return START_STICKY
     }
@@ -85,9 +105,10 @@ open class PlayerService : Service(),
     }
 
     override fun createCurrentContentIntent(player: Player): PendingIntent? {
-        val intent = Intent(this, HomeActivity::class.java)
-        return PendingIntent.getActivity(this, 0
-            , intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val intent = Intent(context, HomeActivity::class.java)
+        return PendingIntent.getActivity(
+            context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT
+        )
     }
 
     override fun getCurrentContentText(player: Player): CharSequence? {
@@ -99,7 +120,7 @@ open class PlayerService : Service(),
         callback: PlayerNotificationManager.BitmapCallback
     ): Bitmap? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.contentResolver.loadThumbnail(Uri.parse(uri), Size(50, 50), null)
+            context.contentResolver.loadThumbnail(Uri.parse(uri), Size(50, 50), null)
         } else {
             null
         }
@@ -121,7 +142,8 @@ open class PlayerService : Service(),
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID,
+            val channel = NotificationChannel(
+                CHANNEL_ID,
                 getString(R.string.player_channel_name), NotificationManager.IMPORTANCE_NONE
             )
             channel.lightColor = Color.BLUE
@@ -134,5 +156,23 @@ open class PlayerService : Service(),
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         stopSelf()
+    }
+
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        super.onPlayWhenReadyChanged(playWhenReady, reason)
+
+        if(playWhenReady) {
+            sendPlayerState(PrefsHelper.PLAYER_STATE_PLAYING)
+        } else {
+            sendPlayerState(PrefsHelper.PLAYER_STATE_PAUSE)
+        }
+    }
+
+    private fun sendPlayerState(state: String) {
+        val intent = Intent()
+        intent.action = ACTION_PLAYER
+        intent.putExtra(Constants.KEY_PLAYER_STATE, state)
+        //prefsHelper.savePref(PrefsHelper.PLAYER_STATE, state)
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 }
