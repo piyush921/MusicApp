@@ -22,6 +22,8 @@ import com.music.app.songsRepository.SongsRepository
 import com.music.app.utils.NumberUtils
 import java.util.concurrent.TimeUnit
 import com.music.app.storage.PrefsHelper
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSelectionListener,
@@ -36,7 +38,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     private var isExpanded: Boolean = false
     private var isPlaying: Boolean = false
     private lateinit var context: Context
-    //private val prefsHelper = PrefsHelper(this)
+    private lateinit var prefsHelper: PrefsHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +56,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
     private fun init() {
         context = this
+        prefsHelper = PrefsHelper(context)
         behavior = BottomSheetBehavior.from(binding.musicPlayer.bottomSheet)
         layoutManager = LinearLayoutManager(this)
         songsList = ArrayList()
@@ -70,12 +73,10 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 when (newState) {
                     BottomSheetBehavior.STATE_HIDDEN -> {
-                        Log.d("thisisdata", "hidden")
                         Glide.with(context).load(R.drawable.ic_arrow_down)
                             .into(binding.musicPlayer.closeHideButton)
                     }
                     BottomSheetBehavior.STATE_EXPANDED -> {
-                        Log.d("thisisdata", "expanded")
                         isExpanded = true
                         expanded()
                     }
@@ -86,15 +87,12 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                         collapsed()
                     }
                     BottomSheetBehavior.STATE_DRAGGING -> {
-                        Log.d("thisisdata", "dragging")
                     }
                     BottomSheetBehavior.STATE_SETTLING -> {
-                        Log.d("thisisdata", "settling")
                         Glide.with(context).load(R.drawable.ic_arrow_down)
                             .into(binding.musicPlayer.closeHideButton)
                     }
                     BottomSheetBehavior.STATE_HALF_EXPANDED -> {
-                        Log.d("thisisdata", "half expanded")
                         Glide.with(context).load(R.drawable.ic_arrow_down)
                             .into(binding.musicPlayer.closeHideButton)
                     }
@@ -157,8 +155,10 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
             }
             R.id.play_pause -> {
 
+                isPlaying = !isPlaying
+
                 val intent = Intent(this, PlayerService::class.java)
-                if (isPlaying) {
+                if (!isPlaying) {
                     intent.action = Constants.SERVICE_ACTION_PLAY
                     Glide.with(this).load(R.drawable.ic_pause).into(binding.musicPlayer.playPause)
                 } else {
@@ -167,7 +167,6 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                 }
                 Util.startForegroundService(this, intent)
 
-                isPlaying = !isPlaying
             }
         }
     }
@@ -175,7 +174,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     override fun onResume() {
         super.onResume()
 
-        //updatePlayer(prefsHelper.getPref(PrefsHelper.PLAYER_STATE).toString())
+        updatePlayer(prefsHelper.getPref(PrefsHelper.PLAYER_STATE).toString())
 
         val intentFilter = IntentFilter(PlayerService.ACTION_PLAYER)
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, intentFilter)
@@ -212,7 +211,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         }
     }
 
-    override fun onSongsGet(list: MutableList<SongsModel.Audio>) {
+    override fun onGetSongs(list: MutableList<SongsModel.Audio>) {
         with(songsList) {
             clear()
             addAll(list)
@@ -247,6 +246,9 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     }
 
     private fun startSong(model: SongsModel.Audio) {
+
+        val list: ArrayList<SongsModel.Audio> =
+
         val intent = Intent(this, PlayerService::class.java)
         if (!isPlaying) {
             intent.action = Constants.SERVICE_ACTION_NOT_PLAYING
@@ -256,6 +258,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         intent.putExtra(Constants.KEY_TITLE, model.title)
         intent.putExtra(Constants.KEY_ARTIST, model.artist)
         intent.putExtra(Constants.KEY_URI, model.uri.toString())
+        intent.putParcelableArrayListExtra(Constants.KEY_LIST, ArrayList(songsList))
         Util.startForegroundService(this, intent)
 
         isPlaying = true

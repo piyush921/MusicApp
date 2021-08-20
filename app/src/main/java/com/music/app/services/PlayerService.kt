@@ -8,20 +8,18 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import android.util.Size
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST
 import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
 import com.music.app.Constants
-import com.music.app.R
 import com.music.app.activities.HomeActivity
 import com.music.app.storage.PrefsHelper
 
@@ -32,17 +30,18 @@ open class PlayerService : Service(),
 
     companion object {
         const val ACTION_PLAYER = "action_player"
+        private const val NOTIFICATION_ID = 1
+        private const val CHANNEL_ID = "player_id"
+        private const val CHANNEL_NAME = "Player Channel"
     }
 
     private lateinit var context: Context
     private lateinit var player: SimpleExoPlayer
     private lateinit var notificationManager: PlayerNotificationManager
-    private val NOTIFICATION_ID = 1
-    private val CHANNEL_ID = "id_1"
     private lateinit var title: String
     private lateinit var artist: String
     private lateinit var uri: String
-    //private lateinit var prefsHelper: PrefsHelper
+    private lateinit var prefsHelper: PrefsHelper
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -52,7 +51,7 @@ open class PlayerService : Service(),
         super.onCreate()
 
         context = this
-        //prefsHelper = PrefsHelper(context)
+        prefsHelper = PrefsHelper(context)
         player = SimpleExoPlayer.Builder(context).build()
         player.addListener(this)
 
@@ -65,7 +64,7 @@ open class PlayerService : Service(),
             Constants.SERVICE_ACTION_PAUSE -> {
                 player.pause()
             }
-            Constants.SERVICE_ACTION_PLAY-> {
+            Constants.SERVICE_ACTION_PLAY -> {
                 player.play()
             }
             else -> {
@@ -77,9 +76,11 @@ open class PlayerService : Service(),
                     player.clearMediaItems()
                 }
                 val dataSourceFactory = DefaultDataSourceFactory(
-                    context, Util.getUserAgent(context, "MusicApp"))
+                    context, Util.getUserAgent(context, "MusicApp")
+                )
                 val mediaSource: MediaSource = ProgressiveMediaSource
                     .Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri))
+                //val s: ConcatenatingMediaSource = ConcatenatingMediaSource(mediaSource)
                 player.setMediaSource(mediaSource)
                 player.prepare()
                 player.playWhenReady = true
@@ -144,7 +145,7 @@ open class PlayerService : Service(),
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.player_channel_name), NotificationManager.IMPORTANCE_NONE
+                CHANNEL_NAME, NotificationManager.IMPORTANCE_NONE
             )
             channel.lightColor = Color.BLUE
             channel.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
@@ -155,13 +156,14 @@ open class PlayerService : Service(),
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
+        prefsHelper.savePref(PrefsHelper.PLAYER_STATE, PrefsHelper.PLAYER_STATE_STOP)
         stopSelf()
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
         super.onPlayWhenReadyChanged(playWhenReady, reason)
 
-        if(playWhenReady) {
+        if (playWhenReady) {
             sendPlayerState(PrefsHelper.PLAYER_STATE_PLAYING)
         } else {
             sendPlayerState(PrefsHelper.PLAYER_STATE_PAUSE)
@@ -172,7 +174,7 @@ open class PlayerService : Service(),
         val intent = Intent()
         intent.action = ACTION_PLAYER
         intent.putExtra(Constants.KEY_PLAYER_STATE, state)
-        //prefsHelper.savePref(PrefsHelper.PLAYER_STATE, state)
+        prefsHelper.savePref(PrefsHelper.PLAYER_STATE, state)
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 }

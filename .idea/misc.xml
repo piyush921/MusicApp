@@ -6,7 +6,10 @@
         <entry key="..\:/Piyush/MusicApp/app/src/main/res/drawable/ic_pause.xml" value="0.20520833333333333" />
         <entry key="..\:/Piyush/MusicApp/app/src/main/res/drawable/ic_play.xml" value="0.20520833333333333" />
         <entry key="..\:/Piyush/MusicApp/app/src/main/res/layout/activity_home.xml" value="0.1890625" />
-        <entry key="..\:/Piyush/MusicApp/app/src/main/res/layout/layout_music_player_bottom_sheet.xml" value="0.18615384615384614" />
+        <entry key="..\:/Piyush/MusicApp/app/src/main/res/layout/item_home_list.xml" value="0.22" />
+        <entry key="..\:/Piyush/MusicApp/app/src/main/res/layout/item_home_list_idle.xml" value="0.1890625" />
+        <entry key="..\:/Piyush/MusicApp/app/src/main/res/layout/item_home_list_playing.xml" value="0.22" />
+        <entry key="..\:/Piyush/MusicApp/app/src/main/res/layout/layout_music_player_bottom_sheet.xml" value="0.2" />
       </map>
     </option>
   </component>

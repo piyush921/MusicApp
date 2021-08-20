@@ -3,6 +3,7 @@ package com.music.app.songsRepository
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
@@ -19,13 +20,13 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
         taskRunner.executeAsync(LongRunningTask(context),
             object : TaskRunner.Callback<MutableList<SongsModel.Audio>> {
                 override fun onComplete(result: MutableList<SongsModel.Audio>) {
-                    listener.onSongsGet(result)
+                    listener.onGetSongs(result)
                 }
             })
     }
 
     interface GetSongsListener {
-        fun onSongsGet(list: MutableList<SongsModel.Audio>)
+        fun onGetSongs(list: MutableList<SongsModel.Audio>)
     }
 
     open class TaskRunner {
@@ -56,7 +57,6 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
                 val proj = arrayOf(
                     MediaStore.Audio.Media._ID,
                     MediaStore.Audio.Media.TITLE,
-                    MediaStore.Audio.Media.DATA,
                     MediaStore.Audio.Media.ALBUM_ID,
                     MediaStore.Audio.Media.DURATION,
                     MediaStore.Audio.Media.SIZE,
@@ -84,7 +84,6 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
 
                     val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                     val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-                    val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
                     val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                     val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                     val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
@@ -100,7 +99,6 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
                         val duration = cursor.getInt(durationColumn)
                         val size = cursor.getInt(sizeColumn)
                         val albumId = cursor.getLong(albumIdColumn)
-                        val data = cursor.getString(dataColumn)
                         val album = cursor.getString(albumColumn)
                         val artist = cursor.getString(artistColumn)
                         val dateAdded = cursor.getString(dateAddedColumn)
@@ -111,8 +109,13 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
                             id
                         )
 
+                        var albumArt: Uri? = null
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                            albumArt = getAlbumUri(albumId)
+                        }
+
                         audioList.add(SongsModel.Audio(contentUri, title, duration, size, id
-                            , data, albumId, album, artist, dateAdded, displayName))
+                            , albumId, albumArt, album, artist, dateAdded, displayName, false))
                     }
 
                 }
@@ -121,6 +124,11 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
                 PermissionUtils.askReadWritePermission(context)
             }
             return audioList
+        }
+
+        private fun getAlbumUri(albumId: Long) : Uri {
+            val art = Uri.parse("content://media/external/audio/albumart")
+            return Uri.withAppendedPath(art, albumId.toString())
         }
 
     }
