@@ -247,17 +247,13 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
     private fun startSong(model: SongsModel.Audio) {
 
-        val list: ArrayList<SongsModel.Audio> =
-
         val intent = Intent(this, PlayerService::class.java)
         if (!isPlaying) {
             intent.action = Constants.SERVICE_ACTION_NOT_PLAYING
         } else {
             intent.action = Constants.SERVICE_ACTION_ALREADY_PLAYING
         }
-        intent.putExtra(Constants.KEY_TITLE, model.title)
-        intent.putExtra(Constants.KEY_ARTIST, model.artist)
-        intent.putExtra(Constants.KEY_URI, model.uri.toString())
+        intent.putExtra(Constants.KEY_POSITION, songsList.indexOf(model))
         intent.putParcelableArrayListExtra(Constants.KEY_LIST, ArrayList(songsList))
         Util.startForegroundService(this, intent)
 

@@ -8,8 +8,10 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.util.Size
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.SimpleExoPlayer
@@ -21,6 +23,7 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
 import com.music.app.Constants
 import com.music.app.activities.HomeActivity
+import com.music.app.models.SongsModel
 import com.music.app.storage.PrefsHelper
 
 open class PlayerService : Service(),
@@ -38,9 +41,8 @@ open class PlayerService : Service(),
     private lateinit var context: Context
     private lateinit var player: SimpleExoPlayer
     private lateinit var notificationManager: PlayerNotificationManager
-    private lateinit var title: String
-    private lateinit var artist: String
-    private lateinit var uri: String
+    private var position: Int = 0
+    private lateinit var songsList: ArrayList<SongsModel.Audio>
     private lateinit var prefsHelper: PrefsHelper
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -68,9 +70,9 @@ open class PlayerService : Service(),
                 player.play()
             }
             else -> {
-                title = intent?.getStringExtra(Constants.KEY_TITLE).toString()
-                artist = intent?.getStringExtra(Constants.KEY_ARTIST).toString()
-                uri = intent?.getStringExtra(Constants.KEY_URI).toString()
+                position = intent?.getIntExtra(Constants.KEY_POSITION, 0)!!
+                songsList = intent.getParcelableArrayListExtra(Constants.KEY_LIST)!!
+
                 if (action.equals(Constants.SERVICE_ACTION_ALREADY_PLAYING)) {
                     player.stop()
                     player.clearMediaItems()
@@ -78,11 +80,16 @@ open class PlayerService : Service(),
                 val dataSourceFactory = DefaultDataSourceFactory(
                     context, Util.getUserAgent(context, "MusicApp")
                 )
-                val mediaSource: MediaSource = ProgressiveMediaSource
-                    .Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(uri))
-                //val s: ConcatenatingMediaSource = ConcatenatingMediaSource(mediaSource)
-                player.setMediaSource(mediaSource)
+
+                val concatenatingMediaSource = ConcatenatingMediaSource()
+                for (model in songsList) {
+                    val mediaSource: MediaSource = ProgressiveMediaSource
+                        .Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(model.uri))
+                    concatenatingMediaSource.addMediaSource(mediaSource)
+                }
+                player.setMediaSource(concatenatingMediaSource)
                 player.prepare()
+                player.seekTo(position, C.TIME_UNSET)
                 player.playWhenReady = true
 
                 notificationManager =
@@ -102,7 +109,7 @@ open class PlayerService : Service(),
     }
 
     override fun getCurrentContentTitle(player: Player): CharSequence {
-        return title
+        return songsList[position].title
     }
 
     override fun createCurrentContentIntent(player: Player): PendingIntent? {
@@ -113,7 +120,7 @@ open class PlayerService : Service(),
     }
 
     override fun getCurrentContentText(player: Player): CharSequence? {
-        return artist
+        return songsList[position].artist
     }
 
     override fun getCurrentLargeIcon(
@@ -121,7 +128,9 @@ open class PlayerService : Service(),
         callback: PlayerNotificationManager.BitmapCallback
     ): Bitmap? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            context.contentResolver.loadThumbnail(Uri.parse(uri), Size(50, 50), null)
+            context.contentResolver.loadThumbnail(
+                songsList[position].uri, Size(50, 50), null
+            )
         } else {
             null
         }
@@ -168,6 +177,26 @@ open class PlayerService : Service(),
         } else {
             sendPlayerState(PrefsHelper.PLAYER_STATE_PAUSE)
         }
+    }
+
+    override fun onPlaybackStateChanged(playbackState: Int) {
+        super.onPlaybackStateChanged(playbackState)
+
+        Log.d(
+            "thisiserror",
+            "Playback state: $playbackState, is playing: ${player.isPlaying}, play when ready: ${player.playWhenReady}"
+        )
+        /*
+          if play from selecting song
+          Playback state: 1, is playing: false, play when ready: true
+          Playback state: 2, is playing: false, play when ready: true
+          Playback state: 3, is playing: true, play when ready: true
+
+          if press next or previous from notification
+          Playback state: 2, is playing: false, play when ready: true
+          Playback state: 3, is playing: true, play when ready: true
+        */
+
     }
 
     private fun sendPlayerState(state: String) {

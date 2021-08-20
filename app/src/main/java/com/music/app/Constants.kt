@@ -12,11 +12,8 @@ open class Constants {
         const val SERVICE_ACTION_PLAY = "action_play"
         const val SERVICE_ACTION_PAUSE = "action_pause"
 
-        const val KEY_TITLE = "key_title"
-        const val KEY_ARTIST = "key_artist"
-        const val KEY_URI = "key_uri"
+        const val KEY_POSITION = "key_position"
         const val KEY_LIST = "key_list"
-        const val KEY_IMAGE = "key_image"
         const val KEY_PLAYER_STATE = "key_player_state"
     }
 

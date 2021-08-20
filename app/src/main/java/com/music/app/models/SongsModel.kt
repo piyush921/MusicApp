@@ -1,12 +1,13 @@
 package com.music.app.models
 
 import android.net.Uri
+import android.os.Build
 import android.os.Parcel
 import android.os.Parcelable
 
 open class SongsModel {
 
-    data class Audio (
+    data class Audio(
         var uri: Uri,
         var title: String,
         var duration: Int,
@@ -21,27 +22,43 @@ open class SongsModel {
         var isSelected: Boolean
     ) : Parcelable {
         constructor(parcel: Parcel) : this(
-            parcel.readParcelable(Uri::class.java.classLoader),
-            parcel.readString(),
-            parcel.readInt(),
-            parcel.readInt(),
-            parcel.readLong(),
-            parcel.readLong(),
-            parcel.readParcelable(Uri::class.java.classLoader),
-            parcel.readString(),
-            parcel.readString(),
-            parcel.readString(),
-            parcel.readString(),
-            parcel.readByte() != 0.toByte()
+            uri = parcel.readParcelable(Uri::class.java.classLoader)!!,
+            title = parcel.readString()!!,
+            duration = parcel.readInt(),
+            size = parcel.readInt(),
+            id = parcel.readLong(),
+            albumId = parcel.readLong(),
+            albumArt = parcel.readParcelable(Uri::class.java.classLoader),
+            album = parcel.readString()!!,
+            artist = parcel.readString()!!,
+            dateAdded = parcel.readString()!!,
+            displayName = parcel.readString()!!,
+            isSelected = parcel.readByte() != 0.toByte()
         ) {
+
         }
 
         override fun describeContents(): Int {
-            TODO("Not yet implemented")
+            return 0
         }
 
         override fun writeToParcel(dest: Parcel?, flags: Int) {
-            TODO("Not yet implemented")
+            dest?.writeParcelable(uri, 0)
+            dest?.writeString(title)
+            dest?.writeInt(duration)
+            dest?.writeInt(size)
+            dest?.writeLong(id)
+            dest?.writeLong(albumId)
+            dest?.writeParcelable(albumArt, 0)
+            dest?.writeString(album)
+            dest?.writeString(artist)
+            dest?.writeString(dateAdded)
+            dest?.writeString(displayName)
+            if (isSelected) {
+                dest?.writeInt(1)
+            } else {
+                dest?.writeInt(0)
+            }
         }
 
         companion object CREATOR : Parcelable.Creator<Audio> {
