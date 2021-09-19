@@ -115,7 +115,7 @@ open class PlayerService : Service(),
     override fun createCurrentContentIntent(player: Player): PendingIntent? {
         val intent = Intent(context, HomeActivity::class.java)
         return PendingIntent.getActivity(
-            context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT
+            context, 0, intent, PendingIntent.FLAG_IMMUTABLE
         )
     }
 
