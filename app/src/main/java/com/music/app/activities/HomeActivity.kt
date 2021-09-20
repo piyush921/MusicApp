@@ -3,7 +3,6 @@ package com.music.app.activities
 import android.content.*
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -22,7 +21,6 @@ import com.music.app.songsRepository.SongsRepository
 import com.music.app.utils.NumberUtils
 import java.util.concurrent.TimeUnit
 import com.music.app.storage.PrefsHelper
-import java.util.*
 import kotlin.collections.ArrayList
 
 

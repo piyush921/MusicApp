@@ -2,4 +2,5 @@
     <string name="app_name">Music App</string>
     <string name="search">Search</string>
     <string name="lyrics">Lyrics</string>
+    <string name="splash_image">Splash image</string>
 </resources>
