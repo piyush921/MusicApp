@@ -19,7 +19,7 @@ open class PermissionUtils {
             val activity = context as Activity
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 activity.requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE), Constants.READ_WRITE_PERMISSION_REQUEST_CODE)
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE), Constants.READ_WRITE_PERMISSION_REQUEST_CODE_SONGS)
             }
         }
     }

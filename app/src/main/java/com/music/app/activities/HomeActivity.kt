@@ -3,7 +3,13 @@ package com.music.app.activities
 import android.content.*
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Log
 import android.view.View
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -12,6 +18,7 @@ import com.google.android.exoplayer2.util.Util
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.music.app.Constants
 import com.music.app.R
+import com.music.app.SongSearch
 import com.music.app.adapters.SongsAdapter
 import com.music.app.base.BaseActivity
 import com.music.app.databinding.ActivityHomeBinding
@@ -21,22 +28,23 @@ import com.music.app.songsRepository.SongsRepository
 import com.music.app.utils.NumberUtils
 import java.util.concurrent.TimeUnit
 import com.music.app.storage.PrefsHelper
+import com.music.app.utils.KeyboardUtils
 import kotlin.collections.ArrayList
 
-
 class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSelectionListener,
-    SongsRepository.GetSongsListener {
+    SongsRepository.GetSongsListener, TextWatcher, SongSearch.SongSearchListener {
 
     private lateinit var binding: ActivityHomeBinding
     private lateinit var behavior: BottomSheetBehavior<*>
     private lateinit var layoutManager: LinearLayoutManager
     private lateinit var adapter: SongsAdapter
     private lateinit var songsList: MutableList<SongsModel.Audio>
-    private var songsRepository: SongsRepository = SongsRepository(this, this)
     private var isExpanded: Boolean = false
     private var isPlaying: Boolean = false
     private lateinit var context: Context
     private lateinit var prefsHelper: PrefsHelper
+    private lateinit var handler: Handler
+    private lateinit var songSearch: SongSearch
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,16 +62,21 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
     private fun init() {
         context = this
+        songsRepository = SongsRepository(context, this)
         prefsHelper = PrefsHelper(context)
         behavior = BottomSheetBehavior.from(binding.musicPlayer.bottomSheet)
         layoutManager = LinearLayoutManager(this)
         songsList = ArrayList()
         adapter = SongsAdapter(this, songsList, this)
+        handler = Handler(Looper.getMainLooper())
+        songSearch = SongSearch(songsList, this)
     }
 
     private fun setListeners() {
         binding.musicPlayer.closeHideButton.setOnClickListener(this)
         binding.musicPlayer.playPause.setOnClickListener(this)
+        binding.clearSearch.setOnClickListener(this)
+        binding.searchField.addTextChangedListener(this)
     }
 
     private fun setupBottomSheer() {
@@ -164,7 +177,11 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                     Glide.with(this).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
                 }
                 Util.startForegroundService(this, intent)
-
+            }
+            R.id.clear_search -> {
+                binding.searchField.setText("")
+                binding.searchField.clearFocus()
+                KeyboardUtils.hideKeyboard(this)
             }
         }
     }
@@ -186,12 +203,12 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     }
 
     private fun updatePlayer(state: String) {
-        if (state == PrefsHelper.PLAYER_STATE_PLAYING) {
+        isPlaying = if (state == PrefsHelper.PLAYER_STATE_PLAYING) {
             Glide.with(this).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
-            isPlaying = false
+            false
         } else {
             Glide.with(this).load(R.drawable.ic_pause).into(binding.musicPlayer.playPause)
-            isPlaying = true
+            true
         }
     }
 
@@ -210,6 +227,15 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     }
 
     override fun onGetSongs(list: MutableList<SongsModel.Audio>) {
+        notifyAdapter(list)
+    }
+
+    override fun onSongSearch(songList: MutableList<SongsModel.Audio>) {
+        notifyAdapter(songList)
+        binding.searchProgressbar.visibility = View.GONE
+    }
+
+    private fun notifyAdapter(list: MutableList<SongsModel.Audio>) {
         with(songsList) {
             clear()
             addAll(list)
@@ -218,7 +244,11 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.shimmerLayout.hideShimmer()
     }
 
-    override fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap) {
+    override fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap?) {
+        if(bitmap == null) {
+            Toast.makeText(this, "cannot play this song", Toast.LENGTH_SHORT).show()
+            return
+        }
         behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         updateMusicPlayerInfo(model, bitmap)
         startSong(model)
@@ -257,4 +287,28 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
         isPlaying = true
     }
+
+    override fun beforeTextChanged(string: CharSequence?, p1: Int, p2: Int, p3: Int) {
+
+    }
+
+    override fun onTextChanged(string: CharSequence?, p1: Int, p2: Int, p3: Int) {
+        handler.removeCallbacksAndMessages(null)
+    }
+
+    override fun afterTextChanged(editable: Editable?) {
+        if (editable?.isEmpty() == true) {
+            binding.clearSearch.visibility = View.GONE
+            songsRepository.getAllSongs()
+            binding.searchProgressbar.visibility = View.GONE
+        } else {
+            binding.clearSearch.visibility = View.VISIBLE
+            binding.searchProgressbar.visibility = View.VISIBLE
+            handler.postDelayed({
+                songSearch.searchSong(editable.toString())
+                Log.d("thisisdata", "search query: ${editable.toString()}")
+            }, 1000)
+        }
+    }
+
 }

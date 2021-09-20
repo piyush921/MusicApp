@@ -3,4 +3,8 @@
     <string name="search">Search</string>
     <string name="lyrics">Lyrics</string>
     <string name="splash_image">Splash image</string>
+    <string name="clear_search">Clear Search</string>
+    <string name="search_icon">Search Icon</string>
+    <string name="permission_denied_read_write_text">Please provide read write permission to use app</string>
+    <string name="go_to_settings">Go To Settings</string>
 </resources>

@@ -1,7 +1,6 @@
 package com.music.app.models
 
 import android.net.Uri
-import android.os.Build
 import android.os.Parcel
 import android.os.Parcelable
 
@@ -34,9 +33,7 @@ open class SongsModel {
             dateAdded = parcel.readString()!!,
             displayName = parcel.readString()!!,
             isSelected = parcel.readByte() != 0.toByte()
-        ) {
-
-        }
+        )
 
         override fun describeContents(): Int {
             return 0

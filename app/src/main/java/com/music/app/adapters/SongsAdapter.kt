@@ -54,7 +54,7 @@ open class SongsAdapter(
                     context.contentResolver.loadThumbnail(list[position].uri, Size(100, 100), null)
                 Glide.with(context).load(bitmap).into(holder.poster)
             } catch (e: FileNotFoundException) {
-                Glide.with(context).load(R.drawable.album).into(holder.poster)
+                Glide.with(context).load(R.drawable.frame_1).into(holder.poster)
             }
         } else {
             Glide.with(context).load(list[position].albumArt).into(holder.poster)
@@ -62,15 +62,17 @@ open class SongsAdapter(
 
         holder.itemView.setOnClickListener {
 
-            previousSelection = currentSelection
-            currentSelection = holder.absoluteAdapterPosition
-            list[currentSelection].isSelected = true
-            list[previousSelection].isSelected = false
-            notifyItemChanged(currentSelection)
-            notifyItemChanged(previousSelection)
+            if(bitmap != null) {
+                previousSelection = currentSelection
+                currentSelection = holder.absoluteAdapterPosition
+                list[currentSelection].isSelected = true
+                list[previousSelection].isSelected = false
+                notifyItemChanged(currentSelection)
+                notifyItemChanged(previousSelection)
+            }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                listener.onSongsSelect(list[currentSelection], bitmap!!)
+                listener.onSongsSelect(list[currentSelection], bitmap)
             } else {
                 val stream =
                     context.contentResolver.openInputStream(list[currentSelection].albumArt!!)
@@ -104,6 +106,6 @@ open class SongsAdapter(
     }
 
     interface SongSelectionListener {
-        fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap)
+        fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap?)
     }
 }

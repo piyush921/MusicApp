@@ -11,38 +11,69 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/search_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="20dp"
-            android:layout_marginEnd="20dp"
-            android:background="@drawable/background_home_search"
+            android:background="@color/white"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
+                android:id="@+id/search_icon"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:padding="10dp"
-                android:src="@drawable/ic_search" />
+                android:src="@drawable/ic_search"
+                android:contentDescription="@string/search_icon"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_margin="10dp"
-                android:text="@string/search"
-                android:textSize="14sp" />
+            <EditText
+                android:id="@+id/search_field"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@null"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="100dp"
+                android:hint="@string/search"
+                android:minWidth="48dp"
+                android:textSize="14sp"
+                android:gravity="start"
+                android:textColor="@color/black"
+                android:inputType="textCapSentences"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-        </LinearLayout>
+            <ImageView
+                android:id="@+id/clear_search"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="10dp"
+                android:src="@drawable/ic_close"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:contentDescription="@string/clear_search"/>
+
+            <ProgressBar
+                android:id="@+id/search_progressbar"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toStartOf="@id/clear_search"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
         <com.facebook.shimmer.ShimmerFrameLayout
             android:id="@+id/shimmer_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:shimmer_auto_start="true"
-            app:layout_constraintTop_toBottomOf="@+id/search_layout">
+            app:layout_constraintTop_toBottomOf="@+id/search_layout"
+            app:shimmer_auto_start="true">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/songs_recyclerview"
