@@ -11,7 +11,7 @@ class SongSearch(
         val searchList: MutableList<SongsModel.Audio> = ArrayList()
 
         for (song in songList) {
-            if (song.title.contains(query)) {
+            if (song.title.lowercase().contains(query.lowercase())) {
                 searchList.add(song)
             }
         }

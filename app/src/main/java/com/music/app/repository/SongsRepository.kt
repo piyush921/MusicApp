@@ -1,4 +1,4 @@
-package com.music.app.songsRepository
+package com.music.app.repository
 
 import android.content.ContentUris
 import android.content.Context
@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.util.Log
 import com.music.app.models.SongsModel
 import com.music.app.utils.PermissionUtils
 import java.util.concurrent.Callable
@@ -113,7 +114,6 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                             albumArt = getAlbumUri(albumId)
                         }
-
                         audioList.add(SongsModel.Audio(contentUri, title, duration, size, id
                             , albumId, albumArt, album, artist, dateAdded, displayName, false))
                     }

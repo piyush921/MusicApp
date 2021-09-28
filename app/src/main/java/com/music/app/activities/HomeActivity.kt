@@ -2,6 +2,7 @@ package com.music.app.activities
 
 import android.content.*
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -13,6 +14,7 @@ import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.util.Util
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -24,11 +26,12 @@ import com.music.app.base.BaseActivity
 import com.music.app.databinding.ActivityHomeBinding
 import com.music.app.models.SongsModel
 import com.music.app.services.PlayerService
-import com.music.app.songsRepository.SongsRepository
+import com.music.app.repository.SongsRepository
 import com.music.app.utils.NumberUtils
 import java.util.concurrent.TimeUnit
 import com.music.app.storage.PrefsHelper
 import com.music.app.utils.KeyboardUtils
+import com.music.app.utils.PermissionUtils
 import kotlin.collections.ArrayList
 
 class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSelectionListener,
@@ -53,7 +56,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
         init()
         setListeners()
-        setupBottomSheer()
+        setupBottomSheet()
         setupRecyclerview()
         songsRepository.getAllSongs()
 
@@ -65,9 +68,9 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         songsRepository = SongsRepository(context, this)
         prefsHelper = PrefsHelper(context)
         behavior = BottomSheetBehavior.from(binding.musicPlayer.bottomSheet)
-        layoutManager = LinearLayoutManager(this)
+        layoutManager = LinearLayoutManager(context)
         songsList = ArrayList()
-        adapter = SongsAdapter(this, songsList, this)
+        adapter = SongsAdapter(context, songsList, this)
         handler = Handler(Looper.getMainLooper())
         songSearch = SongSearch(songsList, this)
     }
@@ -79,7 +82,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.searchField.addTextChangedListener(this)
     }
 
-    private fun setupBottomSheer() {
+    private fun setupBottomSheet() {
         behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 when (newState) {
@@ -168,15 +171,16 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
                 isPlaying = !isPlaying
 
-                val intent = Intent(this, PlayerService::class.java)
+                val intent = Intent(context, PlayerService::class.java)
                 if (!isPlaying) {
                     intent.action = Constants.SERVICE_ACTION_PLAY
-                    Glide.with(this).load(R.drawable.ic_pause).into(binding.musicPlayer.playPause)
+                    Glide.with(context).load(R.drawable.ic_pause)
+                        .into(binding.musicPlayer.playPause)
                 } else {
                     intent.action = Constants.SERVICE_ACTION_PAUSE
-                    Glide.with(this).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
+                    Glide.with(context).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
                 }
-                Util.startForegroundService(this, intent)
+                Util.startForegroundService(context, intent)
             }
             R.id.clear_search -> {
                 binding.searchField.setText("")
@@ -189,10 +193,24 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     override fun onResume() {
         super.onResume()
 
+        if (!PermissionUtils.checkReadWritePermission(context)) {
+            val intent = Intent(context, PermissionDeniedActivity::class.java)
+            intent.putExtra(
+                Constants.KEY_TEXT,
+                getString(R.string.permission_denied_read_write_text)
+            )
+            intent.putExtra(Constants.KEY_IMAGE, R.drawable.permission_read_write)
+            startActivity(intent)
+        } else {
+            if (songsList.isEmpty()) {
+                songsRepository.getAllSongs()
+            }
+        }
+
         updatePlayer(prefsHelper.getPref(PrefsHelper.PLAYER_STATE).toString())
 
         val intentFilter = IntentFilter(PlayerService.ACTION_PLAYER)
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, intentFilter)
+        LocalBroadcastManager.getInstance(context).registerReceiver(broadcastReceiver, intentFilter)
     }
 
     private val broadcastReceiver = object : BroadcastReceiver() {
@@ -204,10 +222,10 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
     private fun updatePlayer(state: String) {
         isPlaying = if (state == PrefsHelper.PLAYER_STATE_PLAYING) {
-            Glide.with(this).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
+            Glide.with(context).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
             false
         } else {
-            Glide.with(this).load(R.drawable.ic_pause).into(binding.musicPlayer.playPause)
+            Glide.with(context).load(R.drawable.ic_pause).into(binding.musicPlayer.playPause)
             true
         }
     }
@@ -215,7 +233,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     override fun onStop() {
         super.onStop()
 
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
+        LocalBroadcastManager.getInstance(context).unregisterReceiver(broadcastReceiver)
     }
 
     override fun onBackPressed() {
@@ -245,8 +263,8 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     }
 
     override fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap?) {
-        if(bitmap == null) {
-            Toast.makeText(this, "cannot play this song", Toast.LENGTH_SHORT).show()
+        if (bitmap == null) {
+            Toast.makeText(context, "cannot play the song", Toast.LENGTH_SHORT).show()
             return
         }
         behavior.state = BottomSheetBehavior.STATE_COLLAPSED
@@ -260,8 +278,8 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.musicPlayer.songName2.text = model.title
         binding.musicPlayer.songName3.text = model.title
         binding.musicPlayer.albumName.text = model.album
-        Glide.with(this).load(bitmap).into(binding.musicPlayer.songImage1)
-        Glide.with(this).load(bitmap).into(binding.musicPlayer.songImage2)
+        Glide.with(context).load(bitmap).into(binding.musicPlayer.songImage1)
+        Glide.with(context).load(bitmap).into(binding.musicPlayer.songImage2)
 
         val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(model.duration.toLong())
         val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(model.duration.toLong())
@@ -270,12 +288,12 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                     ": ${NumberUtils.addZeroBeforeNumber((seconds % 60).toString())}"
         binding.musicPlayer.songTime.text = duration
         binding.musicPlayer.finishTime.text = duration
-        Glide.with(this).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
+        Glide.with(context).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
     }
 
     private fun startSong(model: SongsModel.Audio) {
 
-        val intent = Intent(this, PlayerService::class.java)
+        val intent = Intent(context, PlayerService::class.java)
         if (!isPlaying) {
             intent.action = Constants.SERVICE_ACTION_NOT_PLAYING
         } else {
@@ -283,7 +301,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         }
         intent.putExtra(Constants.KEY_POSITION, songsList.indexOf(model))
         intent.putParcelableArrayListExtra(Constants.KEY_LIST, ArrayList(songsList))
-        Util.startForegroundService(this, intent)
+        Util.startForegroundService(context, intent)
 
         isPlaying = true
     }
@@ -306,7 +324,6 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
             binding.searchProgressbar.visibility = View.VISIBLE
             handler.postDelayed({
                 songSearch.searchSong(editable.toString())
-                Log.d("thisisdata", "search query: ${editable.toString()}")
             }, 1000)
         }
     }

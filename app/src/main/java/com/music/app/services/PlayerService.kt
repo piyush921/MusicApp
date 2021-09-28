@@ -18,6 +18,8 @@ import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.source.TrackGroupArray
+import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
@@ -203,7 +205,8 @@ open class PlayerService : Service(),
         val intent = Intent()
         intent.action = ACTION_PLAYER
         intent.putExtra(Constants.KEY_PLAYER_STATE, state)
-        prefsHelper.savePref(PrefsHelper.PLAYER_STATE, state)
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+
+        prefsHelper.savePref(PrefsHelper.PLAYER_STATE, state)
     }
 }

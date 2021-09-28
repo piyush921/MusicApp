@@ -1,6 +1,5 @@
 package com.music.app.activities
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import com.bumptech.glide.Glide
@@ -10,9 +9,10 @@ import com.music.app.databinding.ActivityPermissionDeniedBinding
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import com.music.app.base.BaseActivity
 
 
-class PermissionDeniedActivity : AppCompatActivity(), View.OnClickListener {
+class PermissionDeniedActivity : BaseActivity(), View.OnClickListener {
 
     private lateinit var binding: ActivityPermissionDeniedBinding
     private var text: String = ""

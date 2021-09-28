@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.music.app.Constants
 import com.music.app.R
 import com.music.app.activities.PermissionDeniedActivity
-import com.music.app.songsRepository.SongsRepository
+import com.music.app.repository.SongsRepository
 
 
 open class BaseActivity : AppCompatActivity() {
@@ -24,10 +24,8 @@ open class BaseActivity : AppCompatActivity() {
         when (requestCode) {
             Constants.READ_WRITE_PERMISSION_REQUEST_CODE_SONGS -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.d("thisisdata", "permission granted")
                     songsRepository.getAllSongs()
                 } else {
-                    Log.d("thisisdata", "permission denied or null")
                     val intent = Intent(this, PermissionDeniedActivity::class.java)
                     intent.putExtra(Constants.KEY_TEXT, getString(R.string.permission_denied_read_write_text))
                     intent.putExtra(Constants.KEY_IMAGE, R.drawable.permission_read_write)
