@@ -51,7 +51,7 @@ open class SongsAdapter(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 bitmap =
-                    context.contentResolver.loadThumbnail(list[position].uri, Size(100, 100), null)
+                    context.contentResolver.loadThumbnail(list[position].uri, Size(300, 300), null)
                 Glide.with(context).load(bitmap).into(holder.poster)
             } catch (e: FileNotFoundException) {
                 Glide.with(context).load(R.drawable.frame_1).into(holder.poster)

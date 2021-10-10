@@ -8,7 +8,10 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.WindowManager
+import android.window.SplashScreen
+import androidx.annotation.RequiresApi
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.DataSource
@@ -18,9 +21,10 @@ import com.bumptech.glide.request.RequestListener
 import com.music.app.R
 import com.music.app.databinding.ActivitySplashBinding
 import com.bumptech.glide.request.target.Target
+import com.music.app.base.BaseActivity
 
 @SuppressLint("CustomSplashScreen")
-class SplashActivity : AppCompatActivity() {
+class SplashActivity : BaseActivity() {
 
     private lateinit var binding: ActivitySplashBinding
     private val SPLASH_TIME = 1000
@@ -70,5 +74,4 @@ class SplashActivity : AppCompatActivity() {
         startActivity(intent)
         finish()
     }
-
 }

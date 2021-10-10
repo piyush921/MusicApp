@@ -2,19 +2,17 @@ package com.music.app.activities
 
 import android.content.*
 import android.graphics.Bitmap
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.util.Util
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -61,6 +59,24 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         songsRepository.getAllSongs()
 
         behavior.state = BottomSheetBehavior.STATE_HIDDEN
+
+        binding.musicPlayer.seekbar.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, isSeeking: Boolean) {
+
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                val progress: Int? = seekBar?.progress
+                val intent = Intent(context, PlayerService::class.java)
+                intent.action = Constants.SERVICE_ACTION_SEEK
+                intent.putExtra(Constants.KEY_PROGRESS, progress)
+                Util.startForegroundService(context, intent)
+            }
+        })
     }
 
     private fun init() {
@@ -209,15 +225,26 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
         updatePlayer(prefsHelper.getPref(PrefsHelper.PLAYER_STATE).toString())
 
-        val intentFilter = IntentFilter(PlayerService.ACTION_PLAYER)
+        val intentFilter = IntentFilter(PlayerService.PLAYER_ACTION)
         LocalBroadcastManager.getInstance(context).registerReceiver(broadcastReceiver, intentFilter)
     }
 
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val state: String = intent?.getStringExtra(Constants.KEY_PLAYER_STATE).toString()
-            updatePlayer(state)
+            val progress: Int = intent?.getIntExtra(Constants.KEY_PROGRESS, 0)!!
+
+            if (progress > 0) {
+                updateSeekbar(progress)
+            } else {
+                updatePlayer(state)
+            }
         }
+    }
+
+    private fun updateSeekbar(progress: Int) {
+        binding.musicPlayer.seekbar.progress = progress
+        binding.musicPlayer.currentTime.text = NumberUtils.convertSecondsToTime(progress)
     }
 
     private fun updatePlayer(state: String) {
@@ -281,14 +308,11 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         Glide.with(context).load(bitmap).into(binding.musicPlayer.songImage1)
         Glide.with(context).load(bitmap).into(binding.musicPlayer.songImage2)
 
-        val minutes: Long = TimeUnit.MILLISECONDS.toMinutes(model.duration.toLong())
-        val seconds: Long = TimeUnit.MILLISECONDS.toSeconds(model.duration.toLong())
-        val duration =
-            "${NumberUtils.addZeroBeforeNumber(minutes.toString())} " +
-                    ": ${NumberUtils.addZeroBeforeNumber((seconds % 60).toString())}"
-        binding.musicPlayer.songTime.text = duration
-        binding.musicPlayer.finishTime.text = duration
+        binding.musicPlayer.songTime.text = NumberUtils.convertSecondsToTime(model.duration / 1000)
+        binding.musicPlayer.finishTime.text = NumberUtils.convertSecondsToTime(model.duration / 1000)
         Glide.with(context).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
+
+        binding.musicPlayer.seekbar.max = model.duration / 1000
     }
 
     private fun startSong(model: SongsModel.Audio) {

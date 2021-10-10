@@ -12,6 +12,7 @@ import com.music.app.repository.SongsRepository
 
 open class BaseActivity : AppCompatActivity() {
 
+    private val TAG : String = BaseActivity::class.java.simpleName
     lateinit var songsRepository: SongsRepository
 
     override fun onRequestPermissionsResult(
@@ -33,7 +34,7 @@ open class BaseActivity : AppCompatActivity() {
                 }
             }
             else -> {
-                Log.d("thisisdata", "permission request code: $requestCode")
+                Log.d(TAG, "permission request code: $requestCode")
             }
         }
     }

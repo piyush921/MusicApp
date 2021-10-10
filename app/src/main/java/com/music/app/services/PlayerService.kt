@@ -5,9 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import android.util.Size
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -18,8 +19,6 @@ import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.source.TrackGroupArray
-import com.google.android.exoplayer2.trackselection.TrackSelectionArray
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
@@ -34,7 +33,7 @@ open class PlayerService : Service(),
     Player.Listener {
 
     companion object {
-        const val ACTION_PLAYER = "action_player"
+        const val PLAYER_ACTION = "player_action"
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "player_id"
         private const val CHANNEL_NAME = "Player Channel"
@@ -46,6 +45,7 @@ open class PlayerService : Service(),
     private var position: Int = 0
     private lateinit var songsList: ArrayList<SongsModel.Audio>
     private lateinit var prefsHelper: PrefsHelper
+    private lateinit var handler: Handler
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -55,6 +55,7 @@ open class PlayerService : Service(),
         super.onCreate()
 
         context = this
+        handler = Handler(Looper.getMainLooper())
         prefsHelper = PrefsHelper(context)
         player = SimpleExoPlayer.Builder(context).build()
         player.addListener(this)
@@ -64,12 +65,20 @@ open class PlayerService : Service(),
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
+        handler.removeCallbacksAndMessages(null)
+
         when (val action = intent?.action) {
             Constants.SERVICE_ACTION_PAUSE -> {
                 player.pause()
             }
             Constants.SERVICE_ACTION_PLAY -> {
                 player.play()
+                updateSeekbarProgress()
+            }
+            Constants.SERVICE_ACTION_SEEK -> {
+                val progress = intent.getIntExtra(Constants.KEY_PROGRESS, 0)
+                player.seekTo((progress * 1000).toLong())
+                updateSeekbarProgress()
             }
             else -> {
                 position = intent?.getIntExtra(Constants.KEY_POSITION, 0)!!
@@ -84,9 +93,12 @@ open class PlayerService : Service(),
                 )
 
                 val concatenatingMediaSource = ConcatenatingMediaSource()
+                var i = -1;
                 for (model in songsList) {
+                    i++;
+                    val mediaItem = MediaItem.Builder().setUri(model.uri).setMediaId(i.toString()).build()
                     val mediaSource: MediaSource = ProgressiveMediaSource
-                        .Factory(dataSourceFactory).createMediaSource(MediaItem.fromUri(model.uri))
+                        .Factory(dataSourceFactory).createMediaSource(mediaItem)
                     concatenatingMediaSource.addMediaSource(mediaSource)
                 }
                 player.setMediaSource(concatenatingMediaSource)
@@ -98,6 +110,8 @@ open class PlayerService : Service(),
                     PlayerNotificationManager.Builder(context, NOTIFICATION_ID, CHANNEL_ID)
                         .setMediaDescriptionAdapter(this).setNotificationListener(this).build()
                 notificationManager.setPlayer(player)
+
+                updateSeekbarProgress()
             }
         }
 
@@ -111,7 +125,7 @@ open class PlayerService : Service(),
     }
 
     override fun getCurrentContentTitle(player: Player): CharSequence {
-        return songsList[position].title
+        return songsList[player.currentWindowIndex].title
     }
 
     override fun createCurrentContentIntent(player: Player): PendingIntent? {
@@ -122,7 +136,7 @@ open class PlayerService : Service(),
     }
 
     override fun getCurrentContentText(player: Player): CharSequence? {
-        return songsList[position].artist
+        return songsList[player.currentWindowIndex].artist
     }
 
     override fun getCurrentLargeIcon(
@@ -131,7 +145,7 @@ open class PlayerService : Service(),
     ): Bitmap? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             context.contentResolver.loadThumbnail(
-                songsList[position].uri, Size(50, 50), null
+                songsList[player.currentWindowIndex].uri, Size(50, 50), null
             )
         } else {
             null
@@ -165,6 +179,20 @@ open class PlayerService : Service(),
         }
     }
 
+    private fun updateSeekbarProgress() {
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                if (player.playbackState == SimpleExoPlayer.STATE_READY) {
+                    val intent = Intent()
+                    intent.action = PLAYER_ACTION
+                    intent.putExtra(Constants.KEY_PROGRESS, (player.currentPosition / 1000).toInt())
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+                }
+                handler.postDelayed(this, 1000)
+            }
+        }, 0)
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
         prefsHelper.savePref(PrefsHelper.PLAYER_STATE, PrefsHelper.PLAYER_STATE_STOP)
@@ -181,13 +209,23 @@ open class PlayerService : Service(),
         }
     }
 
+    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        super.onMediaItemTransition(mediaItem, reason)
+
+        if(reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+            if (mediaItem != null) {
+                if (mediaItem.playbackProperties != null) {
+                    val uri = mediaItem.playbackProperties!!.uri
+                    val mediaId = mediaItem.mediaId
+
+                }
+            }
+        }
+    }
+
     override fun onPlaybackStateChanged(playbackState: Int) {
         super.onPlaybackStateChanged(playbackState)
 
-        Log.d(
-            "thisiserror",
-            "Playback state: $playbackState, is playing: ${player.isPlaying}, play when ready: ${player.playWhenReady}"
-        )
         /*
           if play from selecting song
           Playback state: 1, is playing: false, play when ready: true
@@ -203,7 +241,7 @@ open class PlayerService : Service(),
 
     private fun sendPlayerState(state: String) {
         val intent = Intent()
-        intent.action = ACTION_PLAYER
+        intent.action = PLAYER_ACTION
         intent.putExtra(Constants.KEY_PLAYER_STATE, state)
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
 
