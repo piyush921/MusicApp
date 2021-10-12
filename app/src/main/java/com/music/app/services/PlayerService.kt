@@ -105,9 +105,9 @@ open class PlayerService : Service(),
                 )
 
                 val concatenatingMediaSource = ConcatenatingMediaSource()
-                var i = -1;
+                var i = -1
                 for (model in songsList) {
-                    i++;
+                    i++
                     val mediaItem = MediaItem.Builder().setUri(model.uri).setMediaId(i.toString()).build()
                     val mediaSource: MediaSource = ProgressiveMediaSource
                         .Factory(dataSourceFactory).createMediaSource(mediaItem)
@@ -230,7 +230,7 @@ open class PlayerService : Service(),
         if(reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
             if (mediaItem != null) {
                 if (mediaItem.playbackProperties != null) {
-                    val uri = mediaItem.playbackProperties!!.uri
+                    //val uri = mediaItem.playbackProperties!!.uri
                     val mediaId = mediaItem.mediaId
                     val intent = Intent(PLAYER_ACTION)
                     if(position < Integer.parseInt(mediaId)) {
@@ -245,22 +245,6 @@ open class PlayerService : Service(),
                 }
             }
         }
-    }
-
-    override fun onPlaybackStateChanged(playbackState: Int) {
-        super.onPlaybackStateChanged(playbackState)
-
-        /*
-          if play from selecting song
-          Playback state: 1, is playing: false, play when ready: true
-          Playback state: 2, is playing: false, play when ready: true
-          Playback state: 3, is playing: true, play when ready: true
-
-          if press next or previous from notification
-          Playback state: 2, is playing: false, play when ready: true
-          Playback state: 3, is playing: true, play when ready: true
-        */
-
     }
 
     private fun sendPlayerState(state: String) {

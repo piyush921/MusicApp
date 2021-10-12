@@ -9,7 +9,6 @@ import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -26,8 +25,10 @@ open class SongsAdapter(
 
     private var previousSelection: Int = -1
     private var currentSelection: Int = 0
-    private val VIEW_PLAYING = 0
-    private val VIEW_IDLE = 1
+    companion object {
+        private const val VIEW_PLAYING = 0
+        private const val VIEW_IDLE = 1
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SongsViewHolder {
         var view: View = LayoutInflater.from(parent.context)
@@ -45,8 +46,8 @@ open class SongsAdapter(
 
         holder.songName.text = list[position].title
         holder.albumName.text = list[position].album
-        var bitmap: Bitmap? = null
-        bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+
+        val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             getBitmapFromUri(list[position].uri)
         } else {
             getBitmapFromUri(list[position].albumArt)
@@ -111,7 +112,6 @@ open class SongsAdapter(
         var songName: TextView = itemView.findViewById(R.id.song_name)
         var albumName: TextView = itemView.findViewById(R.id.album_name)
         var poster: CircleImageView = itemView.findViewById(R.id.song_poster)
-        var adjust: ImageView = itemView.findViewById(R.id.adjust)
     }
 
     interface SongSelectionListener {

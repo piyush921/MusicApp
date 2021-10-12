@@ -1,5 +1,6 @@
 package com.music.app.activities
 
+import android.annotation.SuppressLint
 import android.content.*
 import android.graphics.Bitmap
 import android.os.Build
@@ -10,7 +11,6 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.SeekBar
-import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -46,7 +46,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     private lateinit var prefsHelper: PrefsHelper
     private lateinit var handler: Handler
     private lateinit var songSearch: SongSearch
-    private var position = -1;
+    private var position = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -315,6 +315,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.searchProgressbar.visibility = View.GONE
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun notifyAdapter(list: MutableList<SongsModel.Audio>) {
         with(songsList) {
             clear()
