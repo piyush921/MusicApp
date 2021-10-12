@@ -19,6 +19,10 @@ open class Constants {
         const val KEY_PLAYER_STATE = "key_player_state"
         const val KEY_TEXT = "key_text"
         const val KEY_IMAGE = "key_image"
+        const val KEY_NEXT_PREV_ACTION = "key_next_prev_action"
+
+        const val VALUE_NEXT = "value_next"
+        const val VALUE_PREVIOUS = "value_previous"
     }
 
 }

@@ -3,8 +3,8 @@ package com.music.app.adapters
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
@@ -13,7 +13,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.google.gson.Gson
 import com.music.app.R
 import com.music.app.models.SongsModel
 import de.hdodenhof.circleimageview.CircleImageView
@@ -25,7 +24,7 @@ open class SongsAdapter(
     private var listener: SongSelectionListener
 ) : RecyclerView.Adapter<SongsAdapter.SongsViewHolder>() {
 
-    private var previousSelection: Int = 0
+    private var previousSelection: Int = -1
     private var currentSelection: Int = 0
     private val VIEW_PLAYING = 0
     private val VIEW_IDLE = 1
@@ -47,43 +46,53 @@ open class SongsAdapter(
         holder.songName.text = list[position].title
         holder.albumName.text = list[position].album
         var bitmap: Bitmap? = null
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                bitmap =
-                    context.contentResolver.loadThumbnail(list[position].uri, Size(300, 300), null)
-                Glide.with(context).load(bitmap).into(holder.poster)
-            } catch (e: FileNotFoundException) {
-                Glide.with(context).load(R.drawable.frame_1).into(holder.poster)
-            }
+        bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getBitmapFromUri(list[position].uri)
         } else {
-            Glide.with(context).load(list[position].albumArt).into(holder.poster)
+            getBitmapFromUri(list[position].albumArt)
         }
 
+        Glide.with(context).load(bitmap).into(holder.poster)
+
         holder.itemView.setOnClickListener {
-
-            if(bitmap != null) {
-                previousSelection = currentSelection
-                currentSelection = holder.absoluteAdapterPosition
-                list[currentSelection].isSelected = true
-                list[previousSelection].isSelected = false
-                notifyItemChanged(currentSelection)
-                notifyItemChanged(previousSelection)
+            if(list[holder.absoluteAdapterPosition].isSelected) {
+                return@setOnClickListener
             }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                listener.onSongsSelect(list[currentSelection], bitmap)
-            } else {
-                val stream =
-                    context.contentResolver.openInputStream(list[currentSelection].albumArt!!)
-                bitmap = BitmapFactory.decodeStream(stream)
-                listener.onSongsSelect(list[currentSelection], bitmap!!)
-            }
+            updateNowPlaying(holder.absoluteAdapterPosition)
+            listener.onSongsSelect(currentSelection)
         }
     }
 
     override fun getItemCount(): Int {
         return list.size
+    }
+
+    fun updateNowPlaying(position: Int) {
+        previousSelection = currentSelection
+        currentSelection = position
+        list[currentSelection].isSelected = true
+        list[previousSelection].isSelected = false
+        notifyItemChanged(currentSelection)
+        notifyItemChanged(previousSelection)
+    }
+
+    fun getBitmapFromUri(uri: Uri?): Bitmap? {
+
+        if (uri == null) {
+            return BitmapFactory.decodeResource(context.resources, R.drawable.frame_1)
+        }
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                context.contentResolver.loadThumbnail(uri, Size(300, 300), null)
+            } catch (e: FileNotFoundException) {
+                BitmapFactory.decodeResource(context.resources, R.drawable.frame_1)
+            }
+        } else {
+            val stream = context.contentResolver.openInputStream(uri)
+            BitmapFactory.decodeStream(stream)
+        }
+
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -106,6 +115,6 @@ open class SongsAdapter(
     }
 
     interface SongSelectionListener {
-        fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap?)
+        fun onSongsSelect(position: Int)
     }
 }

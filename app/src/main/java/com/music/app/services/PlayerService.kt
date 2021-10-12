@@ -4,12 +4,12 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.util.Log
 import android.util.Size
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.exoplayer2.C
@@ -23,9 +23,11 @@ import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import com.google.android.exoplayer2.util.Util
 import com.music.app.Constants
+import com.music.app.R
 import com.music.app.activities.HomeActivity
 import com.music.app.models.SongsModel
 import com.music.app.storage.PrefsHelper
+import java.io.FileNotFoundException
 
 open class PlayerService : Service(),
     PlayerNotificationManager.MediaDescriptionAdapter,
@@ -78,6 +80,16 @@ open class PlayerService : Service(),
             Constants.SERVICE_ACTION_SEEK -> {
                 val progress = intent.getIntExtra(Constants.KEY_PROGRESS, 0)
                 player.seekTo((progress * 1000).toLong())
+                updateSeekbarProgress()
+            }
+            Constants.SERVICE_ACTION_NEXT -> {
+                position++
+                player.seekTo(position, C.TIME_UNSET)
+                updateSeekbarProgress()
+            }
+            Constants.SERVICE_ACTION_PREVIOUS -> {
+                position--
+                player.seekTo(position, C.TIME_UNSET)
                 updateSeekbarProgress()
             }
             else -> {
@@ -144,9 +156,13 @@ open class PlayerService : Service(),
         callback: PlayerNotificationManager.BitmapCallback
     ): Bitmap? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            context.contentResolver.loadThumbnail(
-                songsList[player.currentWindowIndex].uri, Size(50, 50), null
-            )
+            try {
+                context.contentResolver.loadThumbnail(
+                    songsList[player.currentWindowIndex].uri, Size(50, 50), null
+                )
+            } catch (e: FileNotFoundException) {
+                BitmapFactory.decodeResource(context.resources, R.drawable.frame_1)
+            }
         } else {
             null
         }
@@ -183,8 +199,7 @@ open class PlayerService : Service(),
         handler.postDelayed(object : Runnable {
             override fun run() {
                 if (player.playbackState == SimpleExoPlayer.STATE_READY) {
-                    val intent = Intent()
-                    intent.action = PLAYER_ACTION
+                    val intent = Intent(PLAYER_ACTION)
                     intent.putExtra(Constants.KEY_PROGRESS, (player.currentPosition / 1000).toInt())
                     LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
                 }
@@ -217,7 +232,16 @@ open class PlayerService : Service(),
                 if (mediaItem.playbackProperties != null) {
                     val uri = mediaItem.playbackProperties!!.uri
                     val mediaId = mediaItem.mediaId
-
+                    val intent = Intent(PLAYER_ACTION)
+                    if(position < Integer.parseInt(mediaId)) {
+                        position++
+                        intent.putExtra(Constants.KEY_NEXT_PREV_ACTION, Constants.VALUE_NEXT)
+                    } else if(position > Integer.parseInt(mediaId)) {
+                        position--
+                        intent.putExtra(Constants.KEY_NEXT_PREV_ACTION, Constants.VALUE_PREVIOUS)
+                    }
+                    intent.putExtra(Constants.KEY_POSITION, position)
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
                 }
             }
         }

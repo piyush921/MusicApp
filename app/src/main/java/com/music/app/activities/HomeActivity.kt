@@ -2,6 +2,7 @@ package com.music.app.activities
 
 import android.content.*
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -26,7 +27,6 @@ import com.music.app.models.SongsModel
 import com.music.app.services.PlayerService
 import com.music.app.repository.SongsRepository
 import com.music.app.utils.NumberUtils
-import java.util.concurrent.TimeUnit
 import com.music.app.storage.PrefsHelper
 import com.music.app.utils.KeyboardUtils
 import com.music.app.utils.PermissionUtils
@@ -46,6 +46,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     private lateinit var prefsHelper: PrefsHelper
     private lateinit var handler: Handler
     private lateinit var songSearch: SongSearch
+    private var position = -1;
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,7 +61,8 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
         behavior.state = BottomSheetBehavior.STATE_HIDDEN
 
-        binding.musicPlayer.seekbar.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener {
+        binding.musicPlayer.seekbar.setOnSeekBarChangeListener(object :
+            SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, isSeeking: Boolean) {
 
             }
@@ -95,6 +97,8 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.musicPlayer.closeHideButton.setOnClickListener(this)
         binding.musicPlayer.playPause.setOnClickListener(this)
         binding.clearSearch.setOnClickListener(this)
+        binding.musicPlayer.next.setOnClickListener(this)
+        binding.musicPlayer.previous.setOnClickListener(this)
         binding.searchField.addTextChangedListener(this)
     }
 
@@ -203,6 +207,28 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                 binding.searchField.clearFocus()
                 KeyboardUtils.hideKeyboard(this)
             }
+            R.id.next -> {
+                if (position == songsList.size - 1) {
+                    return
+                }
+                position++
+                val intent = Intent(context, PlayerService::class.java)
+                intent.action = Constants.SERVICE_ACTION_NEXT
+                Util.startForegroundService(context, intent)
+                adapter.updateNowPlaying(position)
+                updateMusicPlayerInfo(songsList[position], position)
+            }
+            R.id.previous -> {
+                if (position == 0) {
+                    return
+                }
+                position--
+                val intent = Intent(context, PlayerService::class.java)
+                intent.action = Constants.SERVICE_ACTION_PREVIOUS
+                Util.startForegroundService(context, intent)
+                adapter.updateNowPlaying(position)
+                updateMusicPlayerInfo(songsList[position], position)
+            }
         }
     }
 
@@ -229,15 +255,24 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         LocalBroadcastManager.getInstance(context).registerReceiver(broadcastReceiver, intentFilter)
     }
 
-    private val broadcastReceiver = object : BroadcastReceiver() {
+    private var broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val state: String = intent?.getStringExtra(Constants.KEY_PLAYER_STATE).toString()
             val progress: Int = intent?.getIntExtra(Constants.KEY_PROGRESS, 0)!!
+            val nextPrevAction = intent.getStringExtra(Constants.KEY_NEXT_PREV_ACTION).toString()
+            val position: Int = intent.getIntExtra(Constants.KEY_POSITION, -1)
 
-            if (progress > 0) {
-                updateSeekbar(progress)
-            } else {
-                updatePlayer(state)
+            when {
+                state.isNotEmpty() && state != "null" -> {
+                    updatePlayer(state)
+                }
+                progress > 0 -> {
+                    updateSeekbar(progress)
+                }
+                nextPrevAction.isNotEmpty() && nextPrevAction != "null" && position != -1 -> {
+                    adapter.updateNowPlaying(position)
+                    updateMusicPlayerInfo(songsList[position], position)
+                }
             }
         }
     }
@@ -289,17 +324,23 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.shimmerLayout.hideShimmer()
     }
 
-    override fun onSongsSelect(model: SongsModel.Audio, bitmap: Bitmap?) {
-        if (bitmap == null) {
-            Toast.makeText(context, "cannot play the song", Toast.LENGTH_SHORT).show()
-            return
-        }
+    override fun onSongsSelect(position: Int) {
+        this.position = position
+        val model = songsList[position]
         behavior.state = BottomSheetBehavior.STATE_COLLAPSED
-        updateMusicPlayerInfo(model, bitmap)
+        updateMusicPlayerInfo(model, position)
         startSong(model)
     }
 
-    private fun updateMusicPlayerInfo(model: SongsModel.Audio, bitmap: Bitmap) {
+    private fun updateMusicPlayerInfo(model: SongsModel.Audio, position: Int) {
+
+        this.position = position
+
+        val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            adapter.getBitmapFromUri(model.uri)
+        } else {
+            adapter.getBitmapFromUri(model.albumArt)
+        }
 
         binding.musicPlayer.songName1.text = model.title
         binding.musicPlayer.songName2.text = model.title
@@ -309,7 +350,8 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         Glide.with(context).load(bitmap).into(binding.musicPlayer.songImage2)
 
         binding.musicPlayer.songTime.text = NumberUtils.convertSecondsToTime(model.duration / 1000)
-        binding.musicPlayer.finishTime.text = NumberUtils.convertSecondsToTime(model.duration / 1000)
+        binding.musicPlayer.finishTime.text =
+            NumberUtils.convertSecondsToTime(model.duration / 1000)
         Glide.with(context).load(R.drawable.ic_play).into(binding.musicPlayer.playPause)
 
         binding.musicPlayer.seekbar.max = model.duration / 1000
