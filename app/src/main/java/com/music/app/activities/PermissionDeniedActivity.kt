@@ -9,7 +9,9 @@ import com.music.app.databinding.ActivityPermissionDeniedBinding
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import com.music.app.base.BaseActivity
+import com.music.app.utils.PermissionUtils
 
 
 class PermissionDeniedActivity : BaseActivity(), View.OnClickListener {
@@ -51,6 +53,14 @@ class PermissionDeniedActivity : BaseActivity(), View.OnClickListener {
                 intent.data = uri
                 startActivity(intent)
             }
+        }
+    }
+
+    override fun onBackPressed() {
+        if(!PermissionUtils.checkReadWritePermission(this)) {
+            Toast.makeText(this, "Please Provide necessary permissions", Toast.LENGTH_SHORT).show()
+        } else {
+            super.onBackPressed()
         }
     }
 

@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
-import android.util.Log
 import com.music.app.models.SongsModel
 import com.music.app.utils.PermissionUtils
 import java.util.concurrent.Callable

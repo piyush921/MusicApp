@@ -8,4 +8,14 @@
     <string name="permission_denied_read_write_text">Please provide read write permission to use app</string>
     <string name="go_to_settings">Go To Settings</string>
     <string name="music_playing_content_description">showing music is playing</string>
+    <string name="song_info">Song Info</string>
+    <string name="song_info_date_added"><![CDATA[<b><h4>Date Added: </h4></b>]]>\t %s</string>
+    <string name="song_info_artist"><![CDATA[<b><h4>Artist: </h4></b>]]>\t %s</string>
+    <string name="song_info_album"><![CDATA[<b><h4>Album: </h4></b>]]>\t %s</string>
+    <string name="song_info_size"><![CDATA[<b><h4>Size: </h4></b>]]>\t %s</string>
+    <string name="song_info_duration"><![CDATA[<b><h4>Duration: </h4></b>]]>\t %s</string>
+    <string name="song_info_path"><![CDATA[<b><h4>Path: </h4></b>]]>\t %s</string>
+    <string name="song_info_display_name"><![CDATA[<b><h4>Display Name: </h4></b>]]>\t %s</string>
+    <string name="song_info_title"><![CDATA[<b><h4>Title: </h4></b>]]>\t %s</string>
+    <string name="song_info_image">Song info image</string>
 </resources>

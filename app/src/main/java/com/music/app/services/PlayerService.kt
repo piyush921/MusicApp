@@ -39,12 +39,12 @@ open class PlayerService : Service(),
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "player_id"
         private const val CHANNEL_NAME = "Player Channel"
+        var position: Int = -1
     }
 
     private lateinit var context: Context
     private lateinit var player: SimpleExoPlayer
     private lateinit var notificationManager: PlayerNotificationManager
-    private var position: Int = 0
     private lateinit var songsList: ArrayList<SongsModel.Audio>
     private lateinit var prefsHelper: PrefsHelper
     private lateinit var handler: Handler

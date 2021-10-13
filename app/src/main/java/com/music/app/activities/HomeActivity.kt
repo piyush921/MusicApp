@@ -9,7 +9,12 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
+import android.widget.PopupMenu
 import android.widget.SeekBar
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -23,17 +28,17 @@ import com.music.app.SongSearch
 import com.music.app.adapters.SongsAdapter
 import com.music.app.base.BaseActivity
 import com.music.app.databinding.ActivityHomeBinding
+import com.music.app.dialogs.SongInfoDialog
 import com.music.app.models.SongsModel
 import com.music.app.services.PlayerService
 import com.music.app.repository.SongsRepository
-import com.music.app.utils.NumberUtils
 import com.music.app.storage.PrefsHelper
-import com.music.app.utils.KeyboardUtils
-import com.music.app.utils.PermissionUtils
+import com.music.app.utils.*
 import kotlin.collections.ArrayList
 
 class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSelectionListener,
-    SongsRepository.GetSongsListener, TextWatcher, SongSearch.SongSearchListener {
+    SongsRepository.GetSongsListener, TextWatcher, SongSearch.SongSearchListener
+    , SongInfoDialog.SongInfoListener {
 
     private lateinit var binding: ActivityHomeBinding
     private lateinit var behavior: BottomSheetBehavior<*>
@@ -57,7 +62,6 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         setListeners()
         setupBottomSheet()
         setupRecyclerview()
-        songsRepository.getAllSongs()
 
         behavior.state = BottomSheetBehavior.STATE_HIDDEN
 
@@ -99,6 +103,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.clearSearch.setOnClickListener(this)
         binding.musicPlayer.next.setOnClickListener(this)
         binding.musicPlayer.previous.setOnClickListener(this)
+        binding.musicPlayer.more.setOnClickListener(this)
         binding.searchField.addTextChangedListener(this)
     }
 
@@ -229,23 +234,51 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                 adapter.updateNowPlaying(position)
                 updateMusicPlayerInfo(songsList[position], position)
             }
+            R.id.more -> {
+                showMorePopup(v, songsList[position])
+            }
         }
+    }
+
+    private fun showMorePopup(v: View, model: SongsModel.Audio) {
+        val popupMenu = PopupMenu(this, v)
+        val inflater = popupMenu.menuInflater
+        inflater.inflate(R.menu.music_player_more_options, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener {
+            when (it.itemId) {
+                R.id.song_info -> {
+                    DialogUtils.showSongInfoDialog(this, supportFragmentManager, model)
+                }
+            }
+            true
+        }
+        popupMenu.show()
+    }
+
+    override fun onSongInfoClose() {
+
     }
 
     override fun onResume() {
         super.onResume()
 
         if (!PermissionUtils.checkReadWritePermission(context)) {
-            val intent = Intent(context, PermissionDeniedActivity::class.java)
-            intent.putExtra(
-                Constants.KEY_TEXT,
-                getString(R.string.permission_denied_read_write_text)
-            )
-            intent.putExtra(Constants.KEY_IMAGE, R.drawable.permission_read_write)
-            startActivity(intent)
+            PermissionUtils.askReadWritePermission(context)
         } else {
             if (songsList.isEmpty()) {
                 songsRepository.getAllSongs()
+            }
+        }
+
+        if (IntentUtils.isServiceRunning(context, PlayerService::class.java)) {
+            val playingPosition = PlayerService.position
+            if (playingPosition != -1) {
+                position = playingPosition
+                if(songsList.isNotEmpty()) {
+                    adapter.updateNowPlaying(position)
+                    behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                    updateMusicPlayerInfo(songsList[position], position)
+                }
             }
         }
 
@@ -292,9 +325,8 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-
+    override fun onPause() {
+        super.onPause()
         LocalBroadcastManager.getInstance(context).unregisterReceiver(broadcastReceiver)
     }
 
@@ -308,6 +340,12 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
     override fun onGetSongs(list: MutableList<SongsModel.Audio>) {
         notifyAdapter(list)
+
+        if (position != -1) {
+            adapter.updateNowPlaying(position)
+            behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            updateMusicPlayerInfo(songsList[position], position)
+        }
     }
 
     override fun onSongSearch(songList: MutableList<SongsModel.Audio>) {
@@ -338,9 +376,9 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         this.position = position
 
         val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            adapter.getBitmapFromUri(model.uri)
+            ImageUtils.getBitmapFromUri(context, model.uri)
         } else {
-            adapter.getBitmapFromUri(model.albumArt)
+            ImageUtils.getBitmapFromUri(context, model.albumArt)
         }
 
         binding.musicPlayer.songName1.text = model.title

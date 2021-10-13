@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.music.app.R
 import com.music.app.models.SongsModel
+import com.music.app.utils.ImageUtils
 import de.hdodenhof.circleimageview.CircleImageView
 import java.io.FileNotFoundException
 
@@ -48,9 +49,9 @@ open class SongsAdapter(
         holder.albumName.text = list[position].album
 
         val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            getBitmapFromUri(list[position].uri)
+            ImageUtils.getBitmapFromUri(context, list[position].uri)
         } else {
-            getBitmapFromUri(list[position].albumArt)
+            ImageUtils.getBitmapFromUri(context, list[position].albumArt)
         }
 
         Glide.with(context).load(bitmap).into(holder.poster)
@@ -75,25 +76,6 @@ open class SongsAdapter(
         list[previousSelection].isSelected = false
         notifyItemChanged(currentSelection)
         notifyItemChanged(previousSelection)
-    }
-
-    fun getBitmapFromUri(uri: Uri?): Bitmap? {
-
-        if (uri == null) {
-            return BitmapFactory.decodeResource(context.resources, R.drawable.frame_1)
-        }
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                context.contentResolver.loadThumbnail(uri, Size(300, 300), null)
-            } catch (e: FileNotFoundException) {
-                BitmapFactory.decodeResource(context.resources, R.drawable.frame_1)
-            }
-        } else {
-            val stream = context.contentResolver.openInputStream(uri)
-            BitmapFactory.decodeStream(stream)
-        }
-
     }
 
     override fun getItemViewType(position: Int): Int {
