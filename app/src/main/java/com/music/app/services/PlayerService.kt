@@ -161,7 +161,7 @@ open class PlayerService : Service(),
                     songsList[player.currentWindowIndex].uri, Size(50, 50), null
                 )
             } catch (e: FileNotFoundException) {
-                BitmapFactory.decodeResource(context.resources, R.drawable.frame_1)
+                BitmapFactory.decodeResource(context.resources, R.drawable.default_album_art)
             }
         } else {
             null
