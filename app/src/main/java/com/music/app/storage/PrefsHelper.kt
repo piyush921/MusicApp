@@ -24,6 +24,8 @@ open class PrefsHelper(val context: Context) {
         const val PLAYER_STATE_PLAYING = "state_playing"
         const val PLAYER_STATE_PAUSE = "state_pause"
         const val PLAYER_STATE_STOP = "state_stop"
+
+        const val SHUFFLE_STATE = "shuffle_state"
     }
 
     open fun delete(key: String?) {

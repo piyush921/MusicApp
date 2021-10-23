@@ -9,10 +9,6 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
 import android.view.View
 import android.widget.PopupMenu
 import android.widget.SeekBar
@@ -37,8 +33,8 @@ import com.music.app.utils.*
 import kotlin.collections.ArrayList
 
 class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSelectionListener,
-    SongsRepository.GetSongsListener, TextWatcher, SongSearch.SongSearchListener
-    , SongInfoDialog.SongInfoListener {
+    SongsRepository.GetSongsListener, TextWatcher, SongSearch.SongSearchListener,
+    SongInfoDialog.SongInfoListener {
 
     private lateinit var binding: ActivityHomeBinding
     private lateinit var behavior: BottomSheetBehavior<*>
@@ -104,6 +100,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.musicPlayer.next.setOnClickListener(this)
         binding.musicPlayer.previous.setOnClickListener(this)
         binding.musicPlayer.more.setOnClickListener(this)
+        binding.musicPlayer.exoShuffle.setOnClickListener(this)
         binding.searchField.addTextChangedListener(this)
     }
 
@@ -213,31 +210,24 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                 KeyboardUtils.hideKeyboard(this)
             }
             R.id.next -> {
-                if (position == songsList.size - 1) {
-                    return
-                }
-                position++
-                val intent = Intent(context, PlayerService::class.java)
-                intent.action = Constants.SERVICE_ACTION_NEXT
-                Util.startForegroundService(context, intent)
-                adapter.updateNowPlaying(position)
-                updateMusicPlayerInfo(songsList[position], position)
+                nextPrevious(Constants.SERVICE_ACTION_NEXT)
             }
             R.id.previous -> {
-                if (position == 0) {
-                    return
-                }
-                position--
-                val intent = Intent(context, PlayerService::class.java)
-                intent.action = Constants.SERVICE_ACTION_PREVIOUS
-                Util.startForegroundService(context, intent)
-                adapter.updateNowPlaying(position)
-                updateMusicPlayerInfo(songsList[position], position)
+                nextPrevious(Constants.SERVICE_ACTION_PREVIOUS)
             }
             R.id.more -> {
                 showMorePopup(v, songsList[position])
             }
+            R.id.exo_shuffle -> {
+                shuffle()
+            }
         }
+    }
+
+    private fun nextPrevious(action: String) {
+        val intent = Intent(context, PlayerService::class.java)
+        intent.action = action
+        Util.startForegroundService(context, intent)
     }
 
     private fun showMorePopup(v: View, model: SongsModel.Audio) {
@@ -259,6 +249,21 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
     }
 
+    private fun shuffle() {
+        val intent = Intent(context, PlayerService::class.java)
+        val shuffleState = prefsHelper.getPref(PrefsHelper.SHUFFLE_STATE)
+        if (shuffleState == Constants.SHUFFLE_STATE_DISABLED) {
+            prefsHelper.savePref(PrefsHelper.SHUFFLE_STATE, Constants.SHUFFLE_STATE_ENABLED)
+            intent.action = Constants.SERVICE_ACTION_SHUFFLE_ON
+            binding.musicPlayer.exoShuffle.setImageResource(com.google.android.exoplayer2.R.drawable.exo_controls_shuffle_on)
+        } else {
+            prefsHelper.savePref(PrefsHelper.SHUFFLE_STATE, Constants.SHUFFLE_STATE_DISABLED)
+            intent.action = Constants.SERVICE_ACTION_SHUFFLE_OFF
+            binding.musicPlayer.exoShuffle.setImageResource(com.google.android.exoplayer2.R.drawable.exo_controls_shuffle_off)
+        }
+        Util.startForegroundService(context, intent)
+    }
+
     override fun onResume() {
         super.onResume()
 
@@ -270,30 +275,47 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
             }
         }
 
-        if (IntentUtils.isServiceRunning(context, PlayerService::class.java)) {
-            val playingPosition = PlayerService.position
-            if (playingPosition != -1) {
-                position = playingPosition
-                if(songsList.isNotEmpty()) {
-                    adapter.updateNowPlaying(position)
-                    behavior.state = BottomSheetBehavior.STATE_COLLAPSED
-                    updateMusicPlayerInfo(songsList[position], position)
-                }
-            }
-        }
-
+        setupShuffle()
+        updatePlayerPosition()
         updatePlayer(prefsHelper.getPref(PrefsHelper.PLAYER_STATE).toString())
 
         val intentFilter = IntentFilter(PlayerService.PLAYER_ACTION)
         LocalBroadcastManager.getInstance(context).registerReceiver(broadcastReceiver, intentFilter)
     }
 
+    private fun setupShuffle() {
+        val shuffleState = prefsHelper.getPref(PrefsHelper.SHUFFLE_STATE)
+        if (shuffleState == null || shuffleState.isEmpty() || shuffleState == "null") {
+            prefsHelper.savePref(PrefsHelper.SHUFFLE_STATE, Constants.SHUFFLE_STATE_DISABLED)
+            binding.musicPlayer.exoShuffle.setImageResource(com.google.android.exoplayer2.R.drawable.exo_controls_shuffle_off)
+        } else {
+            if (shuffleState == Constants.SHUFFLE_STATE_DISABLED) {
+                binding.musicPlayer.exoShuffle.setImageResource(com.google.android.exoplayer2.R.drawable.exo_controls_shuffle_off)
+            } else {
+                binding.musicPlayer.exoShuffle.setImageResource(com.google.android.exoplayer2.R.drawable.exo_controls_shuffle_on)
+            }
+        }
+    }
+
+    private fun updatePlayerPosition() {
+        if (IntentUtils.isServiceRunning(context, PlayerService::class.java)) {
+            if (PlayerService.position != -1) {
+                position = PlayerService.position
+                if (songsList.isNotEmpty()) {
+                    adapter.updateNowPlaying(position)
+                    behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                    updateMusicPlayerInfo(songsList[position], position)
+                }
+            }
+        }
+    }
+
     private var broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val state: String = intent?.getStringExtra(Constants.KEY_PLAYER_STATE).toString()
             val progress: Int = intent?.getIntExtra(Constants.KEY_PROGRESS, 0)!!
-            val nextPrevAction = intent.getStringExtra(Constants.KEY_NEXT_PREV_ACTION).toString()
-            val position: Int = intent.getIntExtra(Constants.KEY_POSITION, -1)
+            val mediaId = intent.getStringExtra(Constants.KEY_MEDIA_ID).toString()
+            var position: Int = intent.getIntExtra(Constants.KEY_POSITION, -1)
 
             when {
                 state.isNotEmpty() && state != "null" -> {
@@ -302,7 +324,12 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                 progress > 0 -> {
                     updateSeekbar(progress)
                 }
-                nextPrevAction.isNotEmpty() && nextPrevAction != "null" && position != -1 -> {
+                mediaId.isNotEmpty() && mediaId != "null" -> {
+                    songsList.forEachIndexed{ index, audio ->
+                        if (audio.id == mediaId.toLong()) {
+                            position = index
+                        }
+                    }
                     adapter.updateNowPlaying(position)
                     updateMusicPlayerInfo(songsList[position], position)
                 }

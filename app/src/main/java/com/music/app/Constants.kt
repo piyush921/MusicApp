@@ -12,6 +12,8 @@ open class Constants {
         const val SERVICE_ACTION_PLAY = "action_play"
         const val SERVICE_ACTION_PAUSE = "action_pause"
         const val SERVICE_ACTION_SEEK = "action_seek"
+        const val SERVICE_ACTION_SHUFFLE_ON = "action_shuffle_on"
+        const val SERVICE_ACTION_SHUFFLE_OFF = "action_shuffle_off"
 
         const val KEY_POSITION = "key_position"
         const val KEY_PROGRESS = "key_progress"
@@ -19,10 +21,10 @@ open class Constants {
         const val KEY_PLAYER_STATE = "key_player_state"
         const val KEY_TEXT = "key_text"
         const val KEY_IMAGE = "key_image"
-        const val KEY_NEXT_PREV_ACTION = "key_next_prev_action"
+        const val KEY_MEDIA_ID = "key_media_item"
 
-        const val VALUE_NEXT = "value_next"
-        const val VALUE_PREVIOUS = "value_previous"
+        const val SHUFFLE_STATE_ENABLED = "1"
+        const val SHUFFLE_STATE_DISABLED = "0"
     }
 
 }

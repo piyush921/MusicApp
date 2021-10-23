@@ -26,6 +26,7 @@ open class SongsAdapter(
 
     private var previousSelection: Int = -1
     private var currentSelection: Int = 0
+
     companion object {
         private const val VIEW_PLAYING = 0
         private const val VIEW_IDLE = 1
@@ -57,7 +58,7 @@ open class SongsAdapter(
         Glide.with(context).load(bitmap).into(holder.poster)
 
         holder.itemView.setOnClickListener {
-            if(list[holder.absoluteAdapterPosition].isSelected) {
+            if (list[holder.absoluteAdapterPosition].isSelected) {
                 return@setOnClickListener
             }
             updateNowPlaying(holder.absoluteAdapterPosition)
@@ -70,6 +71,9 @@ open class SongsAdapter(
     }
 
     fun updateNowPlaying(position: Int) {
+        if(currentSelection == position) {
+            return
+        }
         previousSelection = currentSelection
         currentSelection = position
         list[currentSelection].isSelected = true

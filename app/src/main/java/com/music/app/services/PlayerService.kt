@@ -48,6 +48,7 @@ open class PlayerService : Service(),
     private lateinit var songsList: ArrayList<SongsModel.Audio>
     private lateinit var prefsHelper: PrefsHelper
     private lateinit var handler: Handler
+    private var isFirstTime = false
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -83,13 +84,19 @@ open class PlayerService : Service(),
                 updateSeekbarProgress()
             }
             Constants.SERVICE_ACTION_NEXT -> {
-                position++
-                player.seekTo(position, C.TIME_UNSET)
+                player.seekToNext()
                 updateSeekbarProgress()
             }
             Constants.SERVICE_ACTION_PREVIOUS -> {
-                position--
-                player.seekTo(position, C.TIME_UNSET)
+                player.seekToPrevious()
+                updateSeekbarProgress()
+            }
+            Constants.SERVICE_ACTION_SHUFFLE_OFF -> {
+                player.shuffleModeEnabled = false
+                updateSeekbarProgress()
+            }
+            Constants.SERVICE_ACTION_SHUFFLE_ON -> {
+                player.shuffleModeEnabled = true
                 updateSeekbarProgress()
             }
             else -> {
@@ -105,10 +112,10 @@ open class PlayerService : Service(),
                 )
 
                 val concatenatingMediaSource = ConcatenatingMediaSource()
-                var i = -1
-                for (model in songsList) {
-                    i++
-                    val mediaItem = MediaItem.Builder().setUri(model.uri).setMediaId(i.toString()).build()
+                for (audio in songsList) {
+                    val mediaItem =
+                        MediaItem.Builder().setUri(audio.uri).setMediaId(audio.id.toString())
+                            .build()
                     val mediaSource: MediaSource = ProgressiveMediaSource
                         .Factory(dataSourceFactory).createMediaSource(mediaItem)
                     concatenatingMediaSource.addMediaSource(mediaSource)
@@ -120,14 +127,26 @@ open class PlayerService : Service(),
 
                 notificationManager =
                     PlayerNotificationManager.Builder(context, NOTIFICATION_ID, CHANNEL_ID)
+                        .setSmallIconResourceId(R.drawable.notification_icon)
                         .setMediaDescriptionAdapter(this).setNotificationListener(this).build()
                 notificationManager.setPlayer(player)
 
+                setupShuffle()
                 updateSeekbarProgress()
             }
         }
 
         return START_STICKY
+    }
+
+    private fun setupShuffle() {
+        val shuffleState = prefsHelper.getPref(PrefsHelper.SHUFFLE_STATE)
+        if (shuffleState == null || shuffleState.isEmpty() || shuffleState == "null") {
+            prefsHelper.savePref(PrefsHelper.SHUFFLE_STATE, Constants.SHUFFLE_STATE_DISABLED)
+            player.shuffleModeEnabled = false
+        } else {
+            player.shuffleModeEnabled = shuffleState != Constants.SHUFFLE_STATE_DISABLED
+        }
     }
 
     override fun onDestroy() {
@@ -227,21 +246,33 @@ open class PlayerService : Service(),
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         super.onMediaItemTransition(mediaItem, reason)
 
-        if(reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+        //isFirstTime used for the condition that if someone play for thr first time then this method is calling 2 times
+        //one when reason is MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED and second time when reason is
+        //MEDIA_ITEM_TRANSITION_REASON_SEEK, so i have to make this logic to handle position change
+
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+            isFirstTime = true
+        }
+
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+            || reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
+        ) {
+            if (isFirstTime) {
+                isFirstTime = false
+                return
+            }
             if (mediaItem != null) {
                 if (mediaItem.playbackProperties != null) {
                     //val uri = mediaItem.playbackProperties!!.uri
                     val mediaId = mediaItem.mediaId
                     val intent = Intent(PLAYER_ACTION)
-                    if(position < Integer.parseInt(mediaId)) {
-                        position++
-                        intent.putExtra(Constants.KEY_NEXT_PREV_ACTION, Constants.VALUE_NEXT)
-                    } else if(position > Integer.parseInt(mediaId)) {
-                        position--
-                        intent.putExtra(Constants.KEY_NEXT_PREV_ACTION, Constants.VALUE_PREVIOUS)
-                    }
-                    intent.putExtra(Constants.KEY_POSITION, position)
+                    intent.putExtra(Constants.KEY_MEDIA_ID, mediaId)
                     LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+                    songsList.forEachIndexed{ index, audio ->
+                        if (audio.id == mediaId.toLong()) {
+                            position = index
+                        }
+                    }
                 }
             }
         }

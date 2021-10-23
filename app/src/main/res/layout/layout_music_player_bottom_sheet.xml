@@ -197,13 +197,13 @@
                 app:layout_constraintTop_toBottomOf="@id/finish_time" />
 
             <ImageView
-                android:id="@+id/imageView"
+                android:id="@+id/exo_shuffle"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_marginStart="20dp"
                 android:layout_marginTop="20dp"
                 android:padding="10dp"
-                android:src="@drawable/ic_shuffle"
+                android:src="@drawable/exo_controls_shuffle_off"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/seekbar"
                 app:tint="@color/black" />
