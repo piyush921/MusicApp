@@ -7,26 +7,34 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
-import com.music.app.models.SongsModel
+import androidx.room.Room
+import com.music.app.database.SongsDao
+import com.music.app.database.SongsDatabase
+import com.music.app.models.Audio
 import com.music.app.utils.PermissionUtils
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-open class SongsRepository(var context: Context, val listener: GetSongsListener) {
+open class SongsRepository(
+    var context: Context,
+    val listener: GetSongsListener,
+    var songsDatabase: SongsDatabase,
+    var songsDao: SongsDao
+) {
 
     fun getAllSongs() {
         val taskRunner = TaskRunner()
-        taskRunner.executeAsync(LongRunningTask(context),
-            object : TaskRunner.Callback<MutableList<SongsModel.Audio>> {
-                override fun onComplete(result: MutableList<SongsModel.Audio>) {
+        taskRunner.executeAsync(LongRunningTask(context, songsDatabase, songsDao),
+            object : TaskRunner.Callback<MutableList<Audio>> {
+                override fun onComplete(result: MutableList<Audio>) {
                     listener.onGetSongs(result)
                 }
             })
     }
 
     interface GetSongsListener {
-        fun onGetSongs(list: MutableList<SongsModel.Audio>)
+        fun onGetSongs(list: MutableList<Audio>)
     }
 
     open class TaskRunner {
@@ -47,10 +55,13 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
         }
     }
 
-    open class LongRunningTask(private var context: Context) : Callable<MutableList<SongsModel.Audio>> {
+    open class LongRunningTask(
+        private var context: Context, private var songsDatabase: SongsDatabase,
+        var songsDao: SongsDao
+    ) : Callable<MutableList<Audio>> {
 
-        override fun call(): MutableList<SongsModel.Audio> {
-            val audioList = mutableListOf<SongsModel.Audio>()
+        override fun call(): MutableList<Audio> {
+            val audioList = mutableListOf<Audio>()
 
             if (PermissionUtils.checkReadWritePermission(context)) {
 
@@ -84,13 +95,17 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
 
                     val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                     val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-                    val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
-                    val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                    val albumIdColumn =
+                        cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                    val durationColumn =
+                        cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                     val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
                     val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
                     val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-                    val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
-                    val displayNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+                    val dateAddedColumn =
+                        cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+                    val displayNameColumn =
+                        cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
 
                     while (cursor.moveToNext()) {
                         // Get values of columns for a given video.
@@ -113,8 +128,22 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                             albumArt = getAlbumUri(albumId)
                         }
-                        audioList.add(SongsModel.Audio(contentUri, title, duration, size, id
-                            , albumId, albumArt, album, artist, dateAdded, displayName, false))
+                        audioList.add(
+                            Audio(
+                                contentUri.toString(),
+                                title,
+                                duration,
+                                size,
+                                id,
+                                albumId,
+                                albumArt.toString(),
+                                album,
+                                artist,
+                                dateAdded,
+                                displayName,
+                                false
+                            )
+                        )
                     }
 
                 }
@@ -122,10 +151,14 @@ open class SongsRepository(var context: Context, val listener: GetSongsListener)
             } else {
                 PermissionUtils.askReadWritePermission(context)
             }
+            if (songsDao.getAll().size != audioList.size) {
+                songsDao.clearDb()
+                songsDao.insertSongs(audioList)
+            }
             return audioList
         }
 
-        private fun getAlbumUri(albumId: Long) : Uri {
+        private fun getAlbumUri(albumId: Long): Uri {
             val art = Uri.parse("content://media/external/audio/albumart")
             return Uri.withAppendedPath(art, albumId.toString())
         }

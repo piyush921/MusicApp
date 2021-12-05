@@ -1,14 +1,14 @@
 package com.music.app
 
-import com.music.app.models.SongsModel
+import com.music.app.models.Audio
 
 class SongSearch(
-    private val songList: MutableList<SongsModel.Audio>,
+    private val songList: MutableList<Audio>,
     private val listener: SongSearchListener
 ) {
 
     public fun searchSong(query: String) {
-        val searchList: MutableList<SongsModel.Audio> = ArrayList()
+        val searchList: MutableList<Audio> = ArrayList()
 
         for (song in songList) {
             if (song.title.lowercase().contains(query.lowercase())) {
@@ -21,7 +21,7 @@ class SongSearch(
 
 
     public interface SongSearchListener {
-        fun onSongSearch(songList: MutableList<SongsModel.Audio>)
+        fun onSongSearch(songList: MutableList<Audio>)
     }
 
 }

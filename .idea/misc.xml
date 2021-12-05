@@ -14,6 +14,7 @@
         <entry key="..\:/Projects/MusicApp/app/src/main/res/drawable/animate_up.xml" value="0.24375" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/drawable/animation_wheel.xml" value="0.24375" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/drawable/ic_grey_menu.xml" value="0.19375" />
+        <entry key="..\:/Projects/MusicApp/app/src/main/res/drawable/ic_refresh.xml" value="0.23493360572012256" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/layout-night/activity_home.xml" value="0.1734375" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/layout-night/dialog_song_info.xml" value="0.1734375" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/layout-night/item_home_list_idle.xml" value="0.1734375" />
@@ -27,6 +28,8 @@
         <entry key="..\:/Projects/MusicApp/app/src/main/res/layout/item_home_list_idle.xml" value="0.2234375" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/layout/item_home_list_playing.xml" value="0.22" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/layout/layout_music_player_bottom_sheet.xml" value="0.176" />
+        <entry key="..\:/Projects/MusicApp/app/src/main/res/menu-v26/more_options.xml" value="0.21927083333333333" />
+        <entry key="..\:/Projects/MusicApp/app/src/main/res/menu/more_options.xml" value="0.21927083333333333" />
         <entry key="..\:/Projects/MusicApp/app/src/main/res/menu/music_player_more_options.xml" value="0.1734375" />
       </map>
     </option>

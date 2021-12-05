@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -25,7 +26,7 @@ import com.google.android.exoplayer2.util.Util
 import com.music.app.Constants
 import com.music.app.R
 import com.music.app.activities.HomeActivity
-import com.music.app.models.SongsModel
+import com.music.app.models.Audio
 import com.music.app.storage.PrefsHelper
 import java.io.FileNotFoundException
 
@@ -45,7 +46,7 @@ open class PlayerService : Service(),
     private lateinit var context: Context
     private lateinit var player: SimpleExoPlayer
     private lateinit var notificationManager: PlayerNotificationManager
-    private lateinit var songsList: ArrayList<SongsModel.Audio>
+    private lateinit var songsList: ArrayList<Audio>
     private lateinit var prefsHelper: PrefsHelper
     private lateinit var handler: Handler
     private var isFirstTime = false
@@ -114,7 +115,8 @@ open class PlayerService : Service(),
                 val concatenatingMediaSource = ConcatenatingMediaSource()
                 for (audio in songsList) {
                     val mediaItem =
-                        MediaItem.Builder().setUri(audio.uri).setMediaId(audio.id.toString())
+                        MediaItem.Builder().setUri(
+                            Uri.parse(audio.uri)).setMediaId(audio.id.toString())
                             .build()
                     val mediaSource: MediaSource = ProgressiveMediaSource
                         .Factory(dataSourceFactory).createMediaSource(mediaItem)
@@ -177,7 +179,7 @@ open class PlayerService : Service(),
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 context.contentResolver.loadThumbnail(
-                    songsList[player.currentWindowIndex].uri, Size(50, 50), null
+                    Uri.parse(songsList[player.currentWindowIndex].uri), Size(50, 50), null
                 )
             } catch (e: FileNotFoundException) {
                 BitmapFactory.decodeResource(context.resources, R.drawable.default_album_art)

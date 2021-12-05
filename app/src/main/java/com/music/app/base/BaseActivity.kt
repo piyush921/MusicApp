@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.music.app.Constants
 import com.music.app.R
 import com.music.app.activities.PermissionDeniedActivity
+import com.music.app.database.SongsDatabase
 import com.music.app.repository.SongsRepository
 
 
@@ -15,6 +16,7 @@ open class BaseActivity : AppCompatActivity() {
 
     private val TAG : String = BaseActivity::class.java.simpleName
     lateinit var songsRepository: SongsRepository
+    lateinit var songsDatabase: SongsDatabase
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
