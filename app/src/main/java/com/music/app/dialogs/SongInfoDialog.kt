@@ -10,19 +10,20 @@ import android.view.ViewGroup
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.music.app.R
 import com.music.app.databinding.DialogSongInfoBinding
-import com.music.app.models.SongsModel
+
 import android.R.attr.data
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import com.bumptech.glide.Glide
+import com.music.app.models.Audio
 import com.music.app.utils.ImageUtils
 import com.music.app.utils.NumberUtils
 import java.io.File
 
 
 open class SongInfoDialog(
-    private val listener: SongInfoListener, private val model: SongsModel.Audio
+    private val listener: SongInfoListener, private val model: Audio
 ) : BottomSheetDialogFragment(), View.OnClickListener {
 
     private lateinit var binding: DialogSongInfoBinding
@@ -52,7 +53,7 @@ open class SongInfoDialog(
         binding.displayName.text =
             Html.fromHtml(context?.getString(R.string.song_info_display_name, model.displayName))
         binding.path.text =
-            Html.fromHtml(context?.getString(R.string.song_info_path, model.uri.path))
+            Html.fromHtml(context?.getString(R.string.song_info_path, Uri.parse(model.uri).path))
         binding.duration.text =
             Html.fromHtml(context?.getString(R.string.song_info_duration, duration))
         binding.size.text =
@@ -65,9 +66,9 @@ open class SongInfoDialog(
             Html.fromHtml(context?.getString(R.string.song_info_date_added, date))
 
         val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ImageUtils.getBitmapFromUri(requireContext(), model.uri)
+            ImageUtils.getBitmapFromUri(requireContext(), Uri.parse(model.uri))
         } else {
-            ImageUtils.getBitmapFromUri(requireContext(), model.albumArt)
+            ImageUtils.getBitmapFromUri(requireContext(), Uri.parse(model.albumArt))
         }
         Glide.with(requireContext()).load(bitmap).into(binding.image)
     }

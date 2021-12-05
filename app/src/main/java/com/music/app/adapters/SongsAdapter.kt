@@ -13,14 +13,14 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.music.app.R
-import com.music.app.models.SongsModel
+import com.music.app.models.Audio
 import com.music.app.utils.ImageUtils
 import de.hdodenhof.circleimageview.CircleImageView
 import java.io.FileNotFoundException
 
 open class SongsAdapter(
     private var context: Context,
-    private var list: MutableList<SongsModel.Audio>,
+    private var list: MutableList<Audio>,
     private var listener: SongSelectionListener
 ) : RecyclerView.Adapter<SongsAdapter.SongsViewHolder>() {
 
@@ -50,9 +50,9 @@ open class SongsAdapter(
         holder.albumName.text = list[position].album
 
         val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ImageUtils.getBitmapFromUri(context, list[position].uri)
+            ImageUtils.getBitmapFromUri(context, Uri.parse(list[position].uri))
         } else {
-            ImageUtils.getBitmapFromUri(context, list[position].albumArt)
+            ImageUtils.getBitmapFromUri(context, Uri.parse(list[position].albumArt))
         }
 
         Glide.with(context).load(bitmap).into(holder.poster)

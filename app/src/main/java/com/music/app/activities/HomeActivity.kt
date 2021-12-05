@@ -3,6 +3,7 @@ package com.music.app.activities
 import android.annotation.SuppressLint
 import android.content.*
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -12,9 +13,11 @@ import android.text.TextWatcher
 import android.view.View
 import android.widget.PopupMenu
 import android.widget.SeekBar
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.room.Room
 import com.bumptech.glide.Glide
 import com.google.android.exoplayer2.util.Util
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -23,13 +26,16 @@ import com.music.app.R
 import com.music.app.SongSearch
 import com.music.app.adapters.SongsAdapter
 import com.music.app.base.BaseActivity
+import com.music.app.database.SongsDao
+import com.music.app.database.SongsDatabase
 import com.music.app.databinding.ActivityHomeBinding
 import com.music.app.dialogs.SongInfoDialog
-import com.music.app.models.SongsModel
+import com.music.app.models.Audio
 import com.music.app.services.PlayerService
 import com.music.app.repository.SongsRepository
 import com.music.app.storage.PrefsHelper
 import com.music.app.utils.*
+import java.util.*
 import kotlin.collections.ArrayList
 
 class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSelectionListener,
@@ -40,13 +46,14 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     private lateinit var behavior: BottomSheetBehavior<*>
     private lateinit var layoutManager: LinearLayoutManager
     private lateinit var adapter: SongsAdapter
-    private lateinit var songsList: MutableList<SongsModel.Audio>
+    private lateinit var songsList: MutableList<Audio>
     private var isExpanded: Boolean = false
     private var isPlaying: Boolean = false
     private lateinit var context: Context
     private lateinit var prefsHelper: PrefsHelper
     private lateinit var handler: Handler
     private lateinit var songSearch: SongSearch
+    private lateinit var songsDao: SongsDao
     private var position = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,7 +90,6 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
 
     private fun init() {
         context = this
-        songsRepository = SongsRepository(context, this)
         prefsHelper = PrefsHelper(context)
         behavior = BottomSheetBehavior.from(binding.musicPlayer.bottomSheet)
         layoutManager = LinearLayoutManager(context)
@@ -91,6 +97,16 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         adapter = SongsAdapter(context, songsList, this)
         handler = Handler(Looper.getMainLooper())
         songSearch = SongSearch(songsList, this)
+
+        songsDatabase = Room.databaseBuilder(
+            applicationContext,
+            SongsDatabase::class.java,
+            "SongsDb"
+        )
+            .allowMainThreadQueries()
+            .build()
+        songsDao = songsDatabase.songsDatabase()
+        songsRepository = SongsRepository(context, this, songsDatabase, songsDao)
     }
 
     private fun setListeners() {
@@ -102,6 +118,17 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.musicPlayer.more.setOnClickListener(this)
         binding.musicPlayer.exoShuffle.setOnClickListener(this)
         binding.searchField.addTextChangedListener(this)
+        binding.moreOptions.setOnClickListener(this)
+    }
+
+    private fun checkLocalDatabase() {
+        val tableSize = songsDao.getSize()
+        if (tableSize > 0) {
+            val list: MutableList<Audio> = songsDao.getAll()
+            onGetSongs(list)
+        } else {
+            songsRepository.getAllSongs()
+        }
     }
 
     private fun setupBottomSheet() {
@@ -218,6 +245,9 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
             R.id.more -> {
                 showMorePopup(v, songsList[position])
             }
+            R.id.more_options -> {
+                showMoreOptions(v)
+            }
             R.id.exo_shuffle -> {
                 shuffle()
             }
@@ -230,7 +260,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         Util.startForegroundService(context, intent)
     }
 
-    private fun showMorePopup(v: View, model: SongsModel.Audio) {
+    private fun showMorePopup(v: View, model: Audio) {
         val popupMenu = PopupMenu(this, v)
         val inflater = popupMenu.menuInflater
         inflater.inflate(R.menu.music_player_more_options, popupMenu.menu)
@@ -238,6 +268,24 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
             when (it.itemId) {
                 R.id.song_info -> {
                     DialogUtils.showSongInfoDialog(this, supportFragmentManager, model)
+                }
+            }
+            true
+        }
+        popupMenu.show()
+    }
+
+    private fun showMoreOptions(v: View) {
+        val popupMenu = PopupMenu(this, v)
+        val inflater = popupMenu.menuInflater
+        inflater.inflate(R.menu.more_options, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener {
+            when (it.itemId) {
+                R.id.sync -> {
+                    songsRepository.getAllSongs()
+                }
+                R.id.go_online -> {
+                    showToast("Coming soon")
                 }
             }
             true
@@ -271,7 +319,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
             PermissionUtils.askReadWritePermission(context)
         } else {
             if (songsList.isEmpty()) {
-                songsRepository.getAllSongs()
+                checkLocalDatabase()
             }
         }
 
@@ -325,7 +373,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                     updateSeekbar(progress)
                 }
                 mediaId.isNotEmpty() && mediaId != "null" -> {
-                    songsList.forEachIndexed{ index, audio ->
+                    songsList.forEachIndexed { index, audio ->
                         if (audio.id == mediaId.toLong()) {
                             position = index
                         }
@@ -365,7 +413,11 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         }
     }
 
-    override fun onGetSongs(list: MutableList<SongsModel.Audio>) {
+    override fun onGetSongs(list: MutableList<Audio>) {
+        if (list.isEmpty()) {
+            binding.noSongs.visibility = View.VISIBLE
+        }
+
         notifyAdapter(list)
 
         if (position != -1) {
@@ -375,17 +427,18 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         }
     }
 
-    override fun onSongSearch(songList: MutableList<SongsModel.Audio>) {
+    override fun onSongSearch(songList: MutableList<Audio>) {
         notifyAdapter(songList)
         binding.searchProgressbar.visibility = View.GONE
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun notifyAdapter(list: MutableList<SongsModel.Audio>) {
+    private fun notifyAdapter(list: MutableList<Audio>) {
         with(songsList) {
             clear()
             addAll(list)
         }
+        songsList.sortBy { it.displayName }
         adapter.notifyDataSetChanged()
         binding.shimmerLayout.hideShimmer()
     }
@@ -398,14 +451,14 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         startSong(model)
     }
 
-    private fun updateMusicPlayerInfo(model: SongsModel.Audio, position: Int) {
+    private fun updateMusicPlayerInfo(model: Audio, position: Int) {
 
         this.position = position
 
         val bitmap: Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ImageUtils.getBitmapFromUri(context, model.uri)
+            ImageUtils.getBitmapFromUri(context, Uri.parse(model.uri))
         } else {
-            ImageUtils.getBitmapFromUri(context, model.albumArt)
+            ImageUtils.getBitmapFromUri(context, Uri.parse(model.albumArt))
         }
 
         binding.musicPlayer.songName1.text = model.title
@@ -423,7 +476,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
         binding.musicPlayer.seekbar.max = model.duration / 1000
     }
 
-    private fun startSong(model: SongsModel.Audio) {
+    private fun startSong(model: Audio) {
 
         val intent = Intent(context, PlayerService::class.java)
         if (!isPlaying) {
@@ -449,7 +502,7 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
     override fun afterTextChanged(editable: Editable?) {
         if (editable?.isEmpty() == true) {
             binding.clearSearch.visibility = View.GONE
-            songsRepository.getAllSongs()
+            checkLocalDatabase()
             binding.searchProgressbar.visibility = View.GONE
         } else {
             binding.clearSearch.visibility = View.VISIBLE
@@ -458,6 +511,10 @@ class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSele
                 songSearch.searchSong(editable.toString())
             }, 1000)
         }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
 }

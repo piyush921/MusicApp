@@ -24,50 +24,61 @@
                 android:id="@+id/search_icon"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:contentDescription="@string/search_icon"
                 android:padding="10dp"
                 android:src="@drawable/ic_search"
-                android:contentDescription="@string/search_icon"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
                 app:tint="@color/grey" />
 
             <EditText
                 android:id="@+id/search_field"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@null"
                 android:layout_marginStart="50dp"
                 android:layout_marginEnd="100dp"
-                android:hint="@string/search"
-                android:minWidth="48dp"
-                android:textSize="14sp"
+                android:background="@null"
                 android:gravity="start"
+                android:hint="@string/search"
+                android:inputType="textCapSentences"
+                android:minWidth="48dp"
                 android:textColor="@color/white"
                 android:textColorHint="@color/grey"
-                android:inputType="textCapSentences"
+                android:textSize="14sp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"  />
 
             <ImageView
                 android:id="@+id/clear_search"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:contentDescription="@string/clear_search"
                 android:padding="10dp"
                 android:src="@drawable/ic_close"
                 android:visibility="gone"
+                app:layout_constraintEnd_toStartOf="@id/more_options"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageView
+                android:id="@+id/more_options"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:src="@drawable/ic_more"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                android:contentDescription="@string/clear_search"/>
+                app:tint="@color/dark_grey" />
 
             <ProgressBar
                 android:id="@+id/search_progressbar"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
                 android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/clear_search"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"/>
+                app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -84,6 +95,17 @@
                 android:layout_height="match_parent" />
 
         </com.facebook.shimmer.ShimmerFrameLayout>
+
+        <TextView
+            android:id="@+id/no_songs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No Songs Found"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
