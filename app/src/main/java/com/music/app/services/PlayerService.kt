@@ -14,15 +14,14 @@ import android.os.Looper
 import android.util.Size
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.exoplayer2.C
+import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource
 import com.google.android.exoplayer2.source.MediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
-import com.google.android.exoplayer2.util.Util
+import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.music.app.Constants
 import com.music.app.R
 import com.music.app.activities.HomeActivity
@@ -44,7 +43,7 @@ open class PlayerService : Service(),
     }
 
     private lateinit var context: Context
-    private lateinit var player: SimpleExoPlayer
+    private lateinit var player: ExoPlayer
     private lateinit var notificationManager: PlayerNotificationManager
     private lateinit var songsList: ArrayList<Audio>
     private lateinit var prefsHelper: PrefsHelper
@@ -61,7 +60,7 @@ open class PlayerService : Service(),
         context = this
         handler = Handler(Looper.getMainLooper())
         prefsHelper = PrefsHelper(context)
-        player = SimpleExoPlayer.Builder(context).build()
+        player = ExoPlayer.Builder(context).build()
         player.addListener(this)
 
         createChannel()
@@ -108,9 +107,7 @@ open class PlayerService : Service(),
                     player.stop()
                     player.clearMediaItems()
                 }
-                val dataSourceFactory = DefaultDataSourceFactory(
-                    context, Util.getUserAgent(context, "MusicApp")
-                )
+                val dataSourceFactory = DefaultDataSource.Factory(context)
 
                 val concatenatingMediaSource = ConcatenatingMediaSource()
                 for (audio in songsList) {
@@ -158,7 +155,7 @@ open class PlayerService : Service(),
     }
 
     override fun getCurrentContentTitle(player: Player): CharSequence {
-        return songsList[player.currentWindowIndex].title
+        return songsList[player.currentMediaItemIndex].title
     }
 
     override fun createCurrentContentIntent(player: Player): PendingIntent? {
@@ -169,7 +166,7 @@ open class PlayerService : Service(),
     }
 
     override fun getCurrentContentText(player: Player): CharSequence? {
-        return songsList[player.currentWindowIndex].artist
+        return songsList[player.currentMediaItemIndex].artist
     }
 
     override fun getCurrentLargeIcon(
@@ -179,7 +176,7 @@ open class PlayerService : Service(),
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             try {
                 context.contentResolver.loadThumbnail(
-                    Uri.parse(songsList[player.currentWindowIndex].uri), Size(50, 50), null
+                    Uri.parse(songsList[player.currentMediaItemIndex].uri), Size(50, 50), null
                 )
             } catch (e: FileNotFoundException) {
                 BitmapFactory.decodeResource(context.resources, R.drawable.default_album_art)
@@ -219,7 +216,7 @@ open class PlayerService : Service(),
     private fun updateSeekbarProgress() {
         handler.postDelayed(object : Runnable {
             override fun run() {
-                if (player.playbackState == SimpleExoPlayer.STATE_READY) {
+                if (player.playbackState == ExoPlayer.STATE_READY) {
                     val intent = Intent(PLAYER_ACTION)
                     intent.putExtra(Constants.KEY_PROGRESS, (player.currentPosition / 1000).toInt())
                     LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
@@ -264,7 +261,7 @@ open class PlayerService : Service(),
                 return
             }
             if (mediaItem != null) {
-                if (mediaItem.playbackProperties != null) {
+                if (mediaItem.localConfiguration != null) {
                     //val uri = mediaItem.playbackProperties!!.uri
                     val mediaId = mediaItem.mediaId
                     val intent = Intent(PLAYER_ACTION)

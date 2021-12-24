@@ -1,7 +1,10 @@
 package com.music.app.activities
 
 import android.annotation.SuppressLint
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -35,8 +38,6 @@ import com.music.app.services.PlayerService
 import com.music.app.repository.SongsRepository
 import com.music.app.storage.PrefsHelper
 import com.music.app.utils.*
-import java.util.*
-import kotlin.collections.ArrayList
 
 class HomeActivity : BaseActivity(), View.OnClickListener, SongsAdapter.SongSelectionListener,
     SongsRepository.GetSongsListener, TextWatcher, SongSearch.SongSearchListener,
