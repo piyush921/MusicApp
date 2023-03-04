@@ -41,22 +41,22 @@ data class Audio(
         return 0
     }
 
-    override fun writeToParcel(dest: Parcel?, flags: Int) {
-        dest?.writeString(uri)
-        dest?.writeString(title)
-        dest?.writeInt(duration)
-        dest?.writeInt(size)
-        dest?.writeLong(id)
-        dest?.writeLong(albumId)
-        dest?.writeString(albumArt)
-        dest?.writeString(album)
-        dest?.writeString(artist)
-        dest?.writeString(dateAdded)
-        dest?.writeString(displayName)
+    override fun writeToParcel(dest: Parcel, flags: Int) {
+        dest.writeString(uri)
+        dest.writeString(title)
+        dest.writeInt(duration)
+        dest.writeInt(size)
+        dest.writeLong(id)
+        dest.writeLong(albumId)
+        dest.writeString(albumArt)
+        dest.writeString(album)
+        dest.writeString(artist)
+        dest.writeString(dateAdded)
+        dest.writeString(displayName)
         if (isSelected) {
-            dest?.writeInt(1)
+            dest.writeInt(1)
         } else {
-            dest?.writeInt(0)
+            dest.writeInt(0)
         }
     }
 
