@@ -1,10 +1,2 @@
-## Offline Music application based on:
-
-Worker Thread
-Background execution
-kotlin syntax
-Room Database
-Kotlin Coroutines
-Exoplayer
-
-### Free to use if anyone want it.
+This is a Music App. Based on kotlin. 
+The purpose of the project is to learn the kotlin and new concepts like worker thread, background executions, kotlin syntax, room database, kotlin coroutines and practices.
