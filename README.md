@@ -1,6 +1,6 @@
 ## Offline Music application based on:
 
-Worker Thread
+Worker Thread\n
 Background execution
 kotlin syntax
 Room Database
